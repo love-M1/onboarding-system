@@ -28,6 +28,8 @@ async function loadBaseData() {
       selectedEmpId.value = employees.list[0].empId
       await loadEmployeeStats()
     }
+  } catch {
+    // The HTTP interceptor already presents the server error.
   } finally {
     loading.value = false
   }
@@ -42,6 +44,8 @@ async function searchEmployees(keyword) {
       pageSize: 50
     })
     employeeOptions.value = result.list
+  } catch {
+    // The HTTP interceptor already presents the server error.
   } finally {
     employeeLoading.value = false
   }
@@ -52,7 +56,11 @@ async function loadEmployeeStats() {
     employeeStats.value = null
     return
   }
-  employeeStats.value = await getEmployeeStats(selectedEmpId.value)
+  try {
+    employeeStats.value = await getEmployeeStats(selectedEmpId.value)
+  } catch {
+    // The HTTP interceptor already presents the server error.
+  }
 }
 
 function progress(row) {

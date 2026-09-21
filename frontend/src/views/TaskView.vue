@@ -1,9 +1,10 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Check, Refresh, Search } from '@element-plus/icons-vue'
 import { getTasks, finishTask } from '../api/tasks'
 import { useAuthStore } from '../stores/auth'
+import { waitForConfirmation } from '../utils/uiState'
 
 const auth = useAuthStore()
 const loading = ref(false)
@@ -16,6 +17,9 @@ const filters = reactive({
   pageNum: 1,
   pageSize: 10
 })
+const pageTitle = computed(() => (auth.isEmployee ? '我的任务' : '部门任务'))
+const showFilters = computed(() => !auth.isEmployee)
+const canConfirm = computed(() => auth.isEmployee || auth.isDepartment)
 
 async function loadData() {
   loading.value = true
@@ -29,6 +33,8 @@ async function loadData() {
     })
     records.value = data.list
     total.value = data.total
+  } catch {
+    // The HTTP interceptor already presents the server error.
   } finally {
     loading.value = false
   }
@@ -64,14 +70,20 @@ function disabledReason(task) {
 }
 
 async function confirmFinish(task) {
-  await ElMessageBox.confirm(
+  const confirmed = await waitForConfirmation(() => ElMessageBox.confirm(
     `确认“${task.taskName}”已经办理完成？`,
     '任务确认',
     { type: 'warning', confirmButtonText: '确认完成', cancelButtonText: '取消' }
-  )
-  await finishTask(task.taskId)
-  ElMessage.success('任务已确认完成')
-  loadData()
+  ))
+  if (!confirmed) return
+
+  try {
+    await finishTask(task.taskId)
+    ElMessage.success('任务已确认完成')
+    await loadData()
+  } catch {
+    // The HTTP interceptor already presents the server error.
+  }
 }
 
 onMounted(loadData)
@@ -81,15 +93,16 @@ onMounted(loadData)
   <section class="page-section">
     <div class="section-heading">
       <div>
-        <h2>部门任务</h2>
-        <p v-if="auth.isDepartment">
+        <h2>{{ pageTitle }}</h2>
+        <p v-if="auth.isEmployee">按应完成日期查看本人的全部入职任务。</p>
+        <p v-else-if="auth.isDepartment">
           仅显示 {{ auth.department }} 负责的任务，逾期事项仍可确认完成。
         </p>
         <p v-else>按部门、状态或员工查询任务并处理异常事项。</p>
       </div>
     </div>
 
-    <div class="filter-bar filter-bar-wide">
+    <div v-if="showFilters" class="filter-bar filter-bar-wide">
       <el-input v-model="filters.empId" clearable placeholder="员工编号" :prefix-icon="Search" />
       <el-input
         v-if="auth.isHr"
@@ -107,9 +120,9 @@ onMounted(loadData)
       <el-button :icon="Refresh" @click="resetFilters">重置</el-button>
     </div>
 
-    <el-table v-loading="loading" :data="records" border stripe>
+    <el-table v-loading="loading" :data="records" border stripe class="task-table-desktop">
       <el-table-column prop="taskId" label="任务编号" width="105" align="center" />
-      <el-table-column prop="empName" label="员工" min-width="110" />
+      <el-table-column v-if="!auth.isEmployee" prop="empName" label="员工" min-width="110" />
       <el-table-column prop="taskName" label="任务名称" min-width="200" />
       <el-table-column prop="dutyDept" label="责任部门" min-width="140" />
       <el-table-column prop="dueDate" label="应完成日期" min-width="135" align="center" />
@@ -120,7 +133,7 @@ onMounted(loadData)
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="130" align="center" fixed="right">
+      <el-table-column v-if="canConfirm" label="操作" width="130" align="center" fixed="right">
         <template #default="{ row }">
           <el-tooltip
             :content="disabledReason(row)"
@@ -145,6 +158,47 @@ onMounted(loadData)
         <el-empty description="暂无符合条件的任务" />
       </template>
     </el-table>
+
+    <div v-loading="loading" class="task-mobile-list">
+      <el-empty v-if="!records.length" description="暂无符合条件的任务" />
+      <article v-for="task in records" :key="task.taskId" class="task-mobile-card">
+        <div class="task-mobile-head">
+          <div>
+            <span>任务 #{{ task.taskId }}</span>
+            <strong>{{ task.taskName }}</strong>
+          </div>
+          <el-tag :type="taskTag(task).type" effect="plain">
+            {{ taskTag(task).label }}
+          </el-tag>
+        </div>
+        <dl class="task-mobile-meta">
+          <div v-if="!auth.isEmployee">
+            <dt>员工</dt>
+            <dd>{{ task.empName }}</dd>
+          </div>
+          <div>
+            <dt>责任部门</dt>
+            <dd>{{ task.dutyDept }}</dd>
+          </div>
+          <div>
+            <dt>应完成日期</dt>
+            <dd>{{ task.dueDate }}</dd>
+          </div>
+        </dl>
+        <div v-if="canConfirm" class="task-mobile-action">
+          <el-button
+            type="primary"
+            plain
+            :icon="Check"
+            :disabled="Boolean(disabledReason(task))"
+            @click="confirmFinish(task)"
+          >
+            确认完成
+          </el-button>
+          <span v-if="disabledReason(task)">{{ disabledReason(task) }}</span>
+        </div>
+      </article>
+    </div>
 
     <div class="pagination-row">
       <el-pagination

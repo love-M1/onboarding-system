@@ -60,6 +60,8 @@ async function sendCode() {
     } else {
       ElMessage.success('验证码已发送')
     }
+  } catch {
+    // The HTTP interceptor already presents the server error.
   } finally {
     sendingCode.value = false
   }
@@ -82,6 +84,8 @@ async function submitLogin() {
     })
     ElMessage.success('登录成功')
     router.replace(auth.homePath)
+  } catch {
+    // The HTTP interceptor already presents the server error.
   } finally {
     submitting.value = false
   }
@@ -110,6 +114,8 @@ async function submitRegister() {
     })
     ElMessage.success('注册成功')
     router.replace(auth.homePath)
+  } catch {
+    // The HTTP interceptor already presents the server error.
   } finally {
     submitting.value = false
   }
@@ -160,8 +166,8 @@ onBeforeUnmount(() => {
       </div>
 
       <el-radio-group v-model="mode" size="large" class="auth-mode-switch">
-        <el-radio-button label="login">登录</el-radio-button>
-        <el-radio-button label="register">注册</el-radio-button>
+        <el-radio-button value="login">登录</el-radio-button>
+        <el-radio-button value="register">注册</el-radio-button>
       </el-radio-group>
 
       <div v-if="mode === 'login'" class="auth-form">

@@ -16,6 +16,8 @@ import {
   deleteEmployee,
   getEmployees
 } from '../api/employees'
+import { formatDate } from '../utils/date'
+import { validateForm, waitForConfirmation } from '../utils/uiState'
 
 const router = useRouter()
 const loading = ref(false)
@@ -41,6 +43,10 @@ const form = reactive({
 
 const rules = {
   empName: [{ required: true, message: '请输入员工姓名', trigger: 'blur' }],
+  empPhone: [
+    { required: true, message: '请输入手机号（工号）', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的11位手机号', trigger: 'blur' }
+  ],
   empDepartment: [{ required: true, message: '请输入所属部门', trigger: 'blur' }],
   empPosition: [{ required: true, message: '请输入岗位名称', trigger: 'blur' }],
   entryDate: [{ required: true, message: '请选择入职日期', trigger: 'change' }]
@@ -58,6 +64,8 @@ async function loadData() {
     })
     records.value = data.list
     total.value = data.total
+  } catch {
+    // The HTTP interceptor already presents the server error.
   } finally {
     loading.value = false
   }
@@ -91,7 +99,7 @@ function openCreate() {
 }
 
 async function submitForm() {
-  await formRef.value.validate()
+  if (!(await validateForm(formRef))) return
   submitting.value = true
   try {
     const result = await createEmployee({
@@ -104,31 +112,45 @@ async function submitForm() {
     dialogVisible.value = false
     ElMessage.success(result.message)
     await loadData()
+  } catch {
+    // The HTTP interceptor already presents the server error.
   } finally {
     submitting.value = false
   }
 }
 
 async function archive(row) {
-  await ElMessageBox.confirm(
+  const confirmed = await waitForConfirmation(() => ElMessageBox.confirm(
     `确认归档“${row.empName}”的入职档案？归档后任务将只读。`,
     '归档确认',
     { type: 'warning', confirmButtonText: '确认归档', cancelButtonText: '取消' }
-  )
-  await archiveEmployee(row.empId)
-  ElMessage.success('归档成功')
-  loadData()
+  ))
+  if (!confirmed) return
+
+  try {
+    await archiveEmployee(row.empId)
+    ElMessage.success('归档成功')
+    await loadData()
+  } catch {
+    // The HTTP interceptor already presents the server error.
+  }
 }
 
 async function remove(row) {
-  await ElMessageBox.confirm(
+  const confirmed = await waitForConfirmation(() => ElMessageBox.confirm(
     `确认删除“${row.empName}”的档案及已完成任务？`,
     '删除确认',
     { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' }
-  )
-  await deleteEmployee(row.empId)
-  ElMessage.success('删除成功')
-  loadData()
+  ))
+  if (!confirmed) return
+
+  try {
+    await deleteEmployee(row.empId)
+    ElMessage.success('删除成功')
+    await loadData()
+  } catch {
+    // The HTTP interceptor already presents the server error.
+  }
 }
 
 onMounted(loadData)
@@ -160,7 +182,11 @@ onMounted(loadData)
       <el-table-column prop="empName" label="员工姓名" min-width="120" />
       <el-table-column prop="empDepartment" label="所属部门" min-width="140" />
       <el-table-column prop="empPosition" label="岗位" min-width="140" />
-      <el-table-column prop="entryTime" label="入职时间" min-width="180" />
+      <el-table-column prop="entryTime" label="入职时间" min-width="180">
+        <template #default="{ row }">
+          {{ formatDate(row.entryTime) }}
+        </template>
+      </el-table-column>
       <el-table-column label="状态" width="110" align="center">
         <template #default="{ row }">
           <el-tag :type="row.isArchived === 1 ? 'info' : 'success'" effect="plain">
@@ -215,8 +241,8 @@ onMounted(loadData)
           <el-form-item label="员工姓名" prop="empName">
             <el-input v-model="form.empName" maxlength="50" />
           </el-form-item>
-          <el-form-item label="联系电话" prop="empPhone">
-            <el-input v-model="form.empPhone" maxlength="20" />
+          <el-form-item label="手机号（工号）" prop="empPhone">
+            <el-input v-model="form.empPhone" maxlength="11" />
           </el-form-item>
           <el-form-item label="所属部门" prop="empDepartment">
             <el-input v-model="form.empDepartment" maxlength="50" />

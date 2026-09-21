@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, CircleCheck, Clock, Warning } from '@element-plus/icons-vue'
 import { getEmployee } from '../api/employees'
 import { getEmployeeStats } from '../api/stats'
+import { formatDate } from '../utils/date'
 
 const route = useRoute()
 const router = useRouter()
@@ -31,6 +32,8 @@ async function loadData() {
     ])
     detail.value = detailData
     stats.value = statsData
+  } catch {
+    // The HTTP interceptor already presents the server error.
   } finally {
     loading.value = false
   }
@@ -77,7 +80,7 @@ onMounted(loadData)
           </div>
           <div>
             <dt>入职时间</dt>
-            <dd>{{ detail.entryTime }}</dd>
+            <dd>{{ formatDate(detail.entryTime) }}</dd>
           </div>
           <div>
             <dt>档案状态</dt>
