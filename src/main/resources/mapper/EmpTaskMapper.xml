@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.edu.nuc.onboarding.system.mapper.EmpTaskMapper">
+
+    <sql id="taskColumns">
+        et.taskId,
+        et.empId,
+        e.empName,
+        et.tplId,
+        tt.taskName,
+        tt.dutyDept,
+        e.entryTime,
+        CAST(TIMESTAMPADD(DAY, tt.offsetDay, e.entryTime) AS DATE) AS dueDate,
+        et.taskStatus,
+        CASE
+            WHEN et.taskStatus = 0
+             AND CAST(TIMESTAMPADD(DAY, tt.offsetDay, e.entryTime) AS DATE) &lt; CURRENT_DATE
+            THEN 1 ELSE 0
+        END AS overdue,
+        e.isArchived AS archived,
+        CASE
+            WHEN e.isArchived = 0
+             AND et.taskStatus = 0
+             AND DATE(e.entryTime) &lt;= CURRENT_DATE
+            THEN 1 ELSE 0
+        END AS canFinish,
+        et.finishTime
+    </sql>
+
+    <sql id="taskFrom">
+        FROM emp_task et
+        INNER JOIN employee e ON e.empId = et.empId
+        INNER JOIN task_template tt ON tt.tplId = et.tplId
+    </sql>
+
+    <sql id="taskWhere">
+        <where>
+            <if test="empId != null">
+                AND et.empId = #{empId}
+            </if>
+            <if test="department != null and department != ''">
+                AND tt.dutyDept = #{department}
+            </if>
+            <if test='status == "0"'>
+                AND et.taskStatus = 0
+            </if>
+            <if test='status == "1"'>
+                AND et.taskStatus = 1
+            </if>
+            <if test='status == "overdue"'>
+                AND et.taskStatus = 0
+                AND CAST(TIMESTAMPADD(DAY, tt.offsetDay, e.entryTime) AS DATE) &lt; CURRENT_DATE
+            </if>
+        </where>
+    </sql>
+
+    <insert id="batchInsert">
+        INSERT INTO emp_task(empId, tplId, taskStatus, finishTime)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.empId}, #{item.tplId}, #{item.taskStatus}, #{item.finishTime})
+        </foreach>
+    </insert>
+
+    <select id="selectTaskPage" resultType="cn.edu.nuc.onboarding.system.vo.EmpTaskVO">
+        SELECT <include refid="taskColumns"/>
+        <include refid="taskFrom"/>
+        <include refid="taskWhere"/>
+        ORDER BY dueDate ASC, et.taskId ASC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="countTaskPage" resultType="long">
+        SELECT COUNT(*)
+        <include refid="taskFrom"/>
+        <include refid="taskWhere"/>
+    </select>
+
+    <select id="selectTasksByEmployee" resultType="cn.edu.nuc.onboarding.system.vo.EmpTaskVO">
+        SELECT <include refid="taskColumns"/>
+        <include refid="taskFrom"/>
+        WHERE et.empId = #{empId}
+        ORDER BY dueDate ASC, et.taskId ASC
+    </select>
+
+    <select id="selectTaskDetail" resultType="cn.edu.nuc.onboarding.system.vo.EmpTaskVO">
+        SELECT <include refid="taskColumns"/>
+        <include refid="taskFrom"/>
+        WHERE et.taskId = #{taskId}
+    </select>
+
+    <update id="finishTask">
+        UPDATE emp_task
+        SET taskStatus = 1,
+            finishTime = #{finishTime}
+        WHERE taskId = #{taskId}
+          AND taskStatus = 0
+    </update>
+
+    <select id="countUnfinishedByEmpId" resultType="int">
+        SELECT COUNT(*)
+        FROM emp_task
+        WHERE empId = #{empId}
+          AND taskStatus = 0
+    </select>
+
+    <delete id="deleteByEmpId">
+        DELETE FROM emp_task WHERE empId = #{empId}
+    </delete>
+
+    <select id="selectEmployeeStats" resultType="cn.edu.nuc.onboarding.system.vo.EmployeeStatsVO">
+        SELECT
+            e.empId,
+            e.empName,
+            COUNT(et.taskId) AS totalCount,
+            SUM(CASE WHEN et.taskStatus = 1 THEN 1 ELSE 0 END) AS finishedCount,
+            SUM(CASE WHEN et.taskStatus = 0 THEN 1 ELSE 0 END) AS pendingCount,
+            SUM(CASE
+                    WHEN et.taskStatus = 0
+                     AND CAST(TIMESTAMPADD(DAY, tt.offsetDay, e.entryTime) AS DATE) &lt; CURRENT_DATE
+                    THEN 1 ELSE 0
+                END) AS overdueCount
+        FROM employee e
+        LEFT JOIN emp_task et ON et.empId = e.empId
+        LEFT JOIN task_template tt ON tt.tplId = et.tplId
+        WHERE e.empId = #{empId}
+        GROUP BY e.empId, e.empName
+    </select>
+
+    <select id="selectDepartmentStats" resultType="cn.edu.nuc.onboarding.system.vo.DepartmentStatsVO">
+        SELECT
+            tt.dutyDept,
+            COUNT(et.taskId) AS totalCount,
+            SUM(CASE WHEN et.taskStatus = 1 THEN 1 ELSE 0 END) AS finishedCount,
+            SUM(CASE WHEN et.taskStatus = 0 THEN 1 ELSE 0 END) AS pendingCount,
+            SUM(CASE
+                    WHEN et.taskStatus = 0
+                     AND CAST(TIMESTAMPADD(DAY, tt.offsetDay, e.entryTime) AS DATE) &lt; CURRENT_DATE
+                    THEN 1 ELSE 0
+                END) AS overdueCount
+        FROM emp_task et
+        INNER JOIN employee e ON e.empId = et.empId
+        INNER JOIN task_template tt ON tt.tplId = et.tplId
+        GROUP BY tt.dutyDept
+        ORDER BY tt.dutyDept ASC
+    </select>
+
+    <select id="selectOverdueTasks" resultType="cn.edu.nuc.onboarding.system.vo.EmpTaskVO">
+        SELECT <include refid="taskColumns"/>
+        <include refid="taskFrom"/>
+        WHERE et.taskStatus = 0
+          AND CAST(TIMESTAMPADD(DAY, tt.offsetDay, e.entryTime) AS DATE) &lt; CURRENT_DATE
+        ORDER BY dueDate ASC, et.taskId ASC
+    </select>
+</mapper>

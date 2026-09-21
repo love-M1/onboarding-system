@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.edu.nuc.onboarding.system.mapper.EmployeeMapper">
+
+    <sql id="employeeColumns">
+        empId, empName, empPhone, empDepartment, empPosition, entryTime, isArchived, createTime
+    </sql>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="empId">
+        INSERT INTO employee(empName, empPhone, empDepartment, empPosition, entryTime, isArchived, createTime)
+        VALUES (#{empName}, #{empPhone}, #{empDepartment}, #{empPosition}, #{entryTime}, #{isArchived}, #{createTime})
+    </insert>
+
+    <select id="selectById" resultType="cn.edu.nuc.onboarding.system.entity.Employee">
+        SELECT <include refid="employeeColumns"/>
+        FROM employee
+        WHERE empId = #{empId}
+    </select>
+
+    <select id="selectByPhone" resultType="cn.edu.nuc.onboarding.system.entity.Employee">
+        SELECT <include refid="employeeColumns"/>
+        FROM employee
+        WHERE empPhone = #{phone}
+        ORDER BY empId DESC
+        LIMIT 1
+    </select>
+
+    <select id="countUnarchivedByPhone" resultType="long">
+        SELECT COUNT(*)
+        FROM employee
+        WHERE empPhone = #{phone}
+          AND isArchived = 0
+    </select>
+
+    <select id="countByPhone" resultType="long">
+        SELECT COUNT(*)
+        FROM employee
+        WHERE empPhone = #{phone}
+    </select>
+
+    <select id="selectPage" resultType="cn.edu.nuc.onboarding.system.entity.Employee">
+        SELECT <include refid="employeeColumns"/>
+        FROM employee
+        <where>
+            <if test="empName != null and empName != ''">
+                AND empName LIKE CONCAT('%', #{empName}, '%')
+            </if>
+            <if test="department != null and department != ''">
+                AND empDepartment LIKE CONCAT('%', #{department}, '%')
+            </if>
+            <if test="isArchived != null">
+                AND isArchived = #{isArchived}
+            </if>
+        </where>
+        ORDER BY empId DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*)
+        FROM employee
+        <where>
+            <if test="empName != null and empName != ''">
+                AND empName LIKE CONCAT('%', #{empName}, '%')
+            </if>
+            <if test="department != null and department != ''">
+                AND empDepartment LIKE CONCAT('%', #{department}, '%')
+            </if>
+            <if test="isArchived != null">
+                AND isArchived = #{isArchived}
+            </if>
+        </where>
+    </select>
+
+    <update id="updateArchiveStatus">
+        UPDATE employee
+        SET isArchived = #{isArchived}
+        WHERE empId = #{empId}
+          AND isArchived = 0
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM employee
+        WHERE empId = #{empId}
+          AND isArchived = 0
+    </delete>
+</mapper>

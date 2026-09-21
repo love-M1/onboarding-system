@@ -1,0 +1,38 @@
+server:
+  port: 0
+
+spring:
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:onboarding_test;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema-test.sql
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: cn.edu.nuc.onboarding.system.entity
+  configuration:
+    map-underscore-to-camel-case: false
+
+logging:
+  level:
+    root: WARN
+    cn.edu.nuc.onboarding.system: INFO
+
+app:
+  auth:
+    expose-code: true
+    code-expire-minutes: 5
+    code-resend-seconds: 60
+    max-attempts: 5
+    session-hours: 8
+    bootstrap-hr-phone: 13800000000
+    bootstrap-hr-password: Admin@123
+    bootstrap-hr-name: 人事管理员

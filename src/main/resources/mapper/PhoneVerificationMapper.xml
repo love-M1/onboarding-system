@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.edu.nuc.onboarding.system.mapper.PhoneVerificationMapper">
+
+    <sql id="verificationColumns">
+        verificationId, phone, code, expiresAt, usedAt, attemptCount, createTime
+    </sql>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="verificationId">
+        INSERT INTO phone_verification(phone, code, expiresAt, usedAt, attemptCount, createTime)
+        VALUES (#{phone}, #{code}, #{expiresAt}, #{usedAt}, #{attemptCount}, #{createTime})
+    </insert>
+
+    <select id="selectLatestActive" resultType="cn.edu.nuc.onboarding.system.entity.PhoneVerification">
+        SELECT <include refid="verificationColumns"/>
+        FROM phone_verification
+        WHERE phone = #{phone}
+          AND usedAt IS NULL
+          AND expiresAt &gt; #{now}
+        ORDER BY verificationId DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectLatestByPhone" resultType="cn.edu.nuc.onboarding.system.entity.PhoneVerification">
+        SELECT <include refid="verificationColumns"/>
+        FROM phone_verification
+        WHERE phone = #{phone}
+        ORDER BY verificationId DESC
+        LIMIT 1
+    </select>
+
+    <update id="markUsed">
+        UPDATE phone_verification
+        SET usedAt = #{usedAt}
+        WHERE verificationId = #{verificationId}
+          AND usedAt IS NULL
+    </update>
+
+    <update id="incrementAttempt">
+        UPDATE phone_verification
+        SET attemptCount = attemptCount + 1
+        WHERE verificationId = #{verificationId}
+          AND usedAt IS NULL
+    </update>
+
+    <delete id="deleteExpired">
+        DELETE FROM phone_verification
+        WHERE expiresAt &lt;= #{now}
+    </delete>
+</mapper>

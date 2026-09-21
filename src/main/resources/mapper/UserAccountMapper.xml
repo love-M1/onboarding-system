@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.edu.nuc.onboarding.system.mapper.UserAccountMapper">
+
+    <sql id="accountColumns">
+        accountId, phone, passwordHash, role, empId, displayName, department,
+        status, createTime, updateTime
+    </sql>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="accountId">
+        INSERT INTO user_account(
+            phone, passwordHash, role, empId, displayName, department,
+            status, createTime, updateTime
+        )
+        VALUES (
+            #{phone}, #{passwordHash}, #{role}, #{empId}, #{displayName}, #{department},
+            #{status}, #{createTime}, #{updateTime}
+        )
+    </insert>
+
+    <select id="selectById" resultType="cn.edu.nuc.onboarding.system.entity.UserAccount">
+        SELECT <include refid="accountColumns"/>
+        FROM user_account
+        WHERE accountId = #{accountId}
+    </select>
+
+    <select id="selectByPhone" resultType="cn.edu.nuc.onboarding.system.entity.UserAccount">
+        SELECT <include refid="accountColumns"/>
+        FROM user_account
+        WHERE phone = #{phone}
+    </select>
+
+    <update id="updatePassword">
+        UPDATE user_account
+        SET passwordHash = #{passwordHash},
+            updateTime = CURRENT_TIMESTAMP
+        WHERE accountId = #{accountId}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE user_account
+        SET status = #{status},
+            updateTime = CURRENT_TIMESTAMP
+        WHERE accountId = #{accountId}
+    </update>
+</mapper>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.edu.nuc.onboarding.system.mapper.AuthSessionMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="sessionId">
+        INSERT INTO auth_session(tokenHash, accountId, expiresAt, createTime, lastAccessTime)
+        VALUES (#{tokenHash}, #{accountId}, #{expiresAt}, #{createTime}, #{lastAccessTime})
+    </insert>
+
+    <select id="selectValidByTokenHash" resultType="cn.edu.nuc.onboarding.system.entity.AuthSession">
+        SELECT sessionId, tokenHash, accountId, expiresAt, createTime, lastAccessTime
+        FROM auth_session
+        WHERE tokenHash = #{tokenHash}
+          AND expiresAt &gt; #{now}
+    </select>
+
+    <update id="touch">
+        UPDATE auth_session
+        SET lastAccessTime = #{lastAccessTime}
+        WHERE sessionId = #{sessionId}
+    </update>
+
+    <delete id="deleteByTokenHash">
+        DELETE FROM auth_session
+        WHERE tokenHash = #{tokenHash}
+    </delete>
+</mapper>

@@ -1,0 +1,42 @@
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-stacktrace: never
+
+spring:
+  application:
+    name: onboarding-system
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL:jdbc:mysql://127.0.0.1:3306/onboarding_sys?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  sql:
+    init:
+      mode: never
+
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: false
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: cn.edu.nuc.onboarding.system.entity
+
+logging:
+  file:
+    name: ${LOG_FILE:logs/onboarding-system.log}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+app:
+  auth:
+    expose-code: ${AUTH_EXPOSE_CODE:true}
+    code-expire-minutes: 5
+    code-resend-seconds: 60
+    max-attempts: 5
+    session-hours: 8
+    bootstrap-hr-phone: ${AUTH_HR_PHONE:13800000000}
+    bootstrap-hr-password: ${AUTH_HR_PASSWORD:Admin@123}
+    bootstrap-hr-name: ${AUTH_HR_NAME:人事管理员}

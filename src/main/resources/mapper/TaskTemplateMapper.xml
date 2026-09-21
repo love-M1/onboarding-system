@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.edu.nuc.onboarding.system.mapper.TaskTemplateMapper">
+
+    <select id="selectByCondition" resultType="cn.edu.nuc.onboarding.system.entity.TaskTemplate">
+        SELECT tplId, taskName, dutyDept, offsetDay
+        FROM task_template
+        <where>
+            <if test="taskName != null and taskName != ''">
+                AND taskName LIKE CONCAT('%', #{taskName}, '%')
+            </if>
+            <if test="dutyDept != null and dutyDept != ''">
+                AND dutyDept LIKE CONCAT('%', #{dutyDept}, '%')
+            </if>
+        </where>
+        ORDER BY tplId ASC
+    </select>
+
+    <select id="selectById" resultType="cn.edu.nuc.onboarding.system.entity.TaskTemplate">
+        SELECT tplId, taskName, dutyDept, offsetDay
+        FROM task_template
+        WHERE tplId = #{tplId}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="tplId">
+        INSERT INTO task_template(taskName, dutyDept, offsetDay)
+        VALUES (#{taskName}, #{dutyDept}, #{offsetDay})
+    </insert>
+
+    <update id="update">
+        UPDATE task_template
+        SET taskName = #{taskName},
+            dutyDept = #{dutyDept},
+            offsetDay = #{offsetDay}
+        WHERE tplId = #{tplId}
+    </update>
+</mapper>
