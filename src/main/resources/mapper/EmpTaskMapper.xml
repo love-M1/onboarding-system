@@ -9,13 +9,17 @@
         e.empName,
         et.tplId,
         tt.taskName,
-        tt.dutyDept,
+        et.assignedDept,
+        et.assignedDept AS dutyDept,
         e.entryTime,
-        CAST(TIMESTAMPADD(DAY, tt.offsetDay, e.entryTime) AS DATE) AS dueDate,
+        et.baseDueDate,
+        et.currentDueDate,
+        et.currentDueDate AS dueDate,
+        et.currentSubmissionId,
         et.taskStatus,
         CASE
             WHEN et.taskStatus = 0
-             AND CAST(TIMESTAMPADD(DAY, tt.offsetDay, e.entryTime) AS DATE) &lt; CURRENT_DATE
+             AND et.currentDueDate &lt; CURRENT_DATE
             THEN 1 ELSE 0
         END AS overdue,
         e.isArchived AS archived,
@@ -25,7 +29,10 @@
              AND DATE(e.entryTime) &lt;= CURRENT_DATE
             THEN 1 ELSE 0
         END AS canFinish,
-        et.finishTime
+        et.finishByAccountId,
+        et.finishByName,
+        et.finishTime,
+        et.version
     </sql>
 
     <sql id="taskFrom">
@@ -40,7 +47,7 @@
                 AND et.empId = #{empId}
             </if>
             <if test="department != null and department != ''">
-                AND tt.dutyDept = #{department}
+                AND et.assignedDept = #{department}
             </if>
             <if test='status == "0"'>
                 AND et.taskStatus = 0
@@ -50,7 +57,7 @@
             </if>
             <if test='status == "overdue"'>
                 AND et.taskStatus = 0
-                AND CAST(TIMESTAMPADD(DAY, tt.offsetDay, e.entryTime) AS DATE) &lt; CURRENT_DATE
+                AND et.currentDueDate &lt; CURRENT_DATE
             </if>
         </where>
     </sql>
@@ -158,7 +165,7 @@
             SUM(CASE WHEN et.taskStatus = 0 THEN 1 ELSE 0 END) AS pendingCount,
             SUM(CASE
                     WHEN et.taskStatus = 0
-                     AND CAST(TIMESTAMPADD(DAY, tt.offsetDay, e.entryTime) AS DATE) &lt; CURRENT_DATE
+                     AND et.currentDueDate &lt; CURRENT_DATE
                     THEN 1 ELSE 0
                 END) AS overdueCount
         FROM employee e
@@ -170,27 +177,26 @@
 
     <select id="selectDepartmentStats" resultType="cn.edu.nuc.onboarding.system.vo.DepartmentStatsVO">
         SELECT
-            tt.dutyDept,
+            et.assignedDept AS dutyDept,
             COUNT(et.taskId) AS totalCount,
             SUM(CASE WHEN et.taskStatus = 1 THEN 1 ELSE 0 END) AS finishedCount,
             SUM(CASE WHEN et.taskStatus = 0 THEN 1 ELSE 0 END) AS pendingCount,
             SUM(CASE
                     WHEN et.taskStatus = 0
-                     AND CAST(TIMESTAMPADD(DAY, tt.offsetDay, e.entryTime) AS DATE) &lt; CURRENT_DATE
+                     AND et.currentDueDate &lt; CURRENT_DATE
                     THEN 1 ELSE 0
                 END) AS overdueCount
         FROM emp_task et
         INNER JOIN employee e ON e.empId = et.empId
-        INNER JOIN task_template tt ON tt.tplId = et.tplId
-        GROUP BY tt.dutyDept
-        ORDER BY tt.dutyDept ASC
+        GROUP BY et.assignedDept
+        ORDER BY et.assignedDept ASC
     </select>
 
     <select id="selectOverdueTasks" resultType="cn.edu.nuc.onboarding.system.vo.EmpTaskVO">
         SELECT <include refid="taskColumns"/>
         <include refid="taskFrom"/>
         WHERE et.taskStatus = 0
-          AND CAST(TIMESTAMPADD(DAY, tt.offsetDay, e.entryTime) AS DATE) &lt; CURRENT_DATE
+          AND et.currentDueDate &lt; CURRENT_DATE
         ORDER BY dueDate ASC, et.taskId ASC
     </select>
 </mapper>
