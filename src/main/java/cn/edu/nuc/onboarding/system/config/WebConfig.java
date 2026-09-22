@@ -21,6 +21,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(
                         "/api/auth/verification-codes",
+                        "/api/auth/departments",
                         "/api/auth/register",
                         "/api/auth/login"
                 );

@@ -4,6 +4,7 @@ import { CircleCheck, Clock, DataAnalysis, Warning } from '@element-plus/icons-v
 import { getEmployees } from '../api/employees'
 import { getDepartmentStats, getEmployeeStats } from '../api/stats'
 import { getOverdueTasks } from '../api/tasks'
+import { loadStatsDashboard } from '../utils/stats'
 
 const loading = ref(false)
 const employeeLoading = ref(false)
@@ -16,18 +17,18 @@ const overdueTasks = ref([])
 async function loadBaseData() {
   loading.value = true
   try {
-    const [employees, departments, overdue] = await Promise.all([
-      getEmployees({ pageNum: 1, pageSize: 100 }),
-      getDepartmentStats(),
-      getOverdueTasks()
-    ])
-    employeeOptions.value = employees.list
-    departmentStats.value = departments
-    overdueTasks.value = overdue
-    if (!selectedEmpId.value && employees.list.length) {
-      selectedEmpId.value = employees.list[0].empId
-      await loadEmployeeStats()
-    }
+    const data = await loadStatsDashboard({
+      selectedEmpId: selectedEmpId.value,
+      listEmployees: () => getEmployees({ pageNum: 1, pageSize: 100 }),
+      listDepartmentStats: getDepartmentStats,
+      listOverdueTasks: getOverdueTasks,
+      loadEmployeeStats: getEmployeeStats
+    })
+    employeeOptions.value = data.employeeOptions
+    departmentStats.value = data.departmentStats
+    overdueTasks.value = data.overdueTasks
+    selectedEmpId.value = data.selectedEmpId
+    employeeStats.value = data.employeeStats
   } catch {
     // The HTTP interceptor already presents the server error.
   } finally {

@@ -36,3 +36,8 @@ app:
     bootstrap-hr-phone: 13800000000
     bootstrap-hr-password: Admin@123
     bootstrap-hr-name: 人事管理员
+  department:
+    options:
+      - 财务部
+      - 市场部
+      - 法务部

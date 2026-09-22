@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -31,6 +33,11 @@ public class AuthController {
             @RequestBody VerificationCodeRequestDTO dto
     ) {
         return ApiResponse.success("验证码已发送", authService.requestVerificationCode(dto.phone()));
+    }
+
+    @GetMapping("/departments")
+    public ApiResponse<List<String>> departments() {
+        return ApiResponse.success(authService.listDepartmentOptions());
     }
 
     @PostMapping("/register")

@@ -39,6 +39,14 @@
         WHERE empPhone = #{phone}
     </select>
 
+    <select id="selectDistinctDepartments" resultType="java.lang.String">
+        SELECT DISTINCT empDepartment
+        FROM employee
+        WHERE empDepartment IS NOT NULL
+          AND TRIM(empDepartment) != ''
+        ORDER BY empDepartment
+    </select>
+
     <select id="selectPage" resultType="cn.edu.nuc.onboarding.system.entity.Employee">
         SELECT <include refid="employeeColumns"/>
         FROM employee

@@ -16,6 +16,7 @@ import {
   deleteEmployee,
   getEmployees
 } from '../api/employees'
+import DepartmentSelect from '../components/DepartmentSelect.vue'
 import { formatDate } from '../utils/date'
 import { validateForm, waitForConfirmation } from '../utils/uiState'
 
@@ -245,7 +246,7 @@ onMounted(loadData)
             <el-input v-model="form.empPhone" maxlength="11" />
           </el-form-item>
           <el-form-item label="所属部门" prop="empDepartment">
-            <el-input v-model="form.empDepartment" maxlength="50" />
+            <DepartmentSelect v-model="form.empDepartment" />
           </el-form-item>
           <el-form-item label="岗位名称" prop="empPosition">
             <el-input v-model="form.empPosition" maxlength="50" />

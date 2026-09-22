@@ -16,6 +16,8 @@ public interface TaskTemplateMapper {
 
     TaskTemplate selectById(@Param("tplId") Integer tplId);
 
+    List<String> selectDistinctDutyDepartments();
+
     int insert(TaskTemplate template);
 
     int update(TaskTemplate template);

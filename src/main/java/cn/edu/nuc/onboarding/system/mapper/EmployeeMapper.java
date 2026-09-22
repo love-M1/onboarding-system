@@ -19,6 +19,8 @@ public interface EmployeeMapper {
 
     long countByPhone(@Param("phone") String phone);
 
+    List<String> selectDistinctDepartments();
+
     List<Employee> selectPage(
             @Param("empName") String empName,
             @Param("department") String department,

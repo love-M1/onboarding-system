@@ -121,6 +121,50 @@ class AuthFlowIntegrationTest {
                 .andExpect(jsonPath("$.code").value(5003));
     }
 
+    @Test
+    void listsDepartmentOptionsFromEmployeeArchivesAndTaskTemplates() throws Exception {
+        insertEmployee("13800000004");
+        jdbcTemplate.update("""
+                INSERT INTO task_template(taskName, dutyDept, offsetDay)
+                VALUES ('办理工牌', '行政部', 1), ('开通邮箱', '信息技术部', 1)
+                """);
+
+        mockMvc.perform(get("/api/auth/departments"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.hasItems(
+                        "研发部", "行政部", "信息技术部")));
+    }
+
+    @Test
+    void listsConfiguredDepartmentOptionsWhenNoBusinessDataExists() throws Exception {
+        mockMvc.perform(get("/api/auth/departments"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.hasItems(
+                        "财务部", "市场部", "法务部")));
+    }
+
+    @Test
+    void rejectsRegistrationWhenSelectedDepartmentDoesNotMatchEmployeeArchive() throws Exception {
+        insertEmployee("13800000005");
+        String code = requestCode("13800000005");
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "phone":"13800000005",
+                                  "code":"%s",
+                                  "password":"Onboard123",
+                                  "department":"行政部"
+                                }
+                                """.formatted(code)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(400));
+    }
+
     private void insertEmployee(String phone) {
         jdbcTemplate.update("""
                 INSERT INTO employee(empName, empPhone, empDepartment, empPosition,
