@@ -15,6 +15,10 @@ public interface EmpTaskMapper {
 
     int batchInsert(@Param("list") List<EmpTask> tasks);
 
+    int insertSnapshotTask(EmpTask task);
+
+    EmpTask selectById(@Param("taskId") Integer taskId);
+
     List<EmpTaskVO> selectTaskPage(
             @Param("empId") Integer empId,
             @Param("department") String department,

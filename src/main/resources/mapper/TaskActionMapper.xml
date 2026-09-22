@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.edu.nuc.onboarding.system.mapper.TaskActionMapper">
+
+    <sql id="actionColumns">
+        actionId,
+        taskId,
+        actionType,
+        actorAccountId,
+        actorNameSnapshot,
+        actionTime,
+        reason,
+        newDueDate,
+        relatedSubmissionId
+    </sql>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="actionId">
+        INSERT INTO task_action(
+            taskId, actionType, actorAccountId, actorNameSnapshot, actionTime,
+            reason, newDueDate, relatedSubmissionId
+        )
+        VALUES (
+            #{taskId}, #{actionType}, #{actorAccountId}, #{actorNameSnapshot}, #{actionTime},
+            #{reason}, #{newDueDate}, #{relatedSubmissionId}
+        )
+    </insert>
+
+    <select id="selectByTaskId" resultType="cn.edu.nuc.onboarding.system.entity.TaskAction">
+        SELECT <include refid="actionColumns"/>
+        FROM task_action
+        WHERE taskId = #{taskId}
+        ORDER BY actionTime ASC, actionId ASC
+    </select>
+</mapper>

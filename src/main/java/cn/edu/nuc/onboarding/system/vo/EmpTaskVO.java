@@ -11,13 +11,20 @@ public class EmpTaskVO {
     private Integer tplId;
     private String taskName;
     private String dutyDept;
+    private String assignedDept;
     private LocalDateTime entryTime;
+    private LocalDate baseDueDate;
+    private LocalDate currentDueDate;
     private LocalDate dueDate;
+    private Integer currentSubmissionId;
     private Integer taskStatus;
     private Boolean overdue;
     private Boolean archived;
     private Boolean canFinish;
+    private Integer finishByAccountId;
+    private String finishByName;
     private LocalDateTime finishTime;
+    private Integer version;
 
     public Integer getTaskId() {
         return taskId;
@@ -67,6 +74,14 @@ public class EmpTaskVO {
         this.dutyDept = dutyDept;
     }
 
+    public String getAssignedDept() {
+        return assignedDept;
+    }
+
+    public void setAssignedDept(String assignedDept) {
+        this.assignedDept = assignedDept;
+    }
+
     public LocalDateTime getEntryTime() {
         return entryTime;
     }
@@ -75,12 +90,36 @@ public class EmpTaskVO {
         this.entryTime = entryTime;
     }
 
+    public LocalDate getBaseDueDate() {
+        return baseDueDate;
+    }
+
+    public void setBaseDueDate(LocalDate baseDueDate) {
+        this.baseDueDate = baseDueDate;
+    }
+
+    public LocalDate getCurrentDueDate() {
+        return currentDueDate;
+    }
+
+    public void setCurrentDueDate(LocalDate currentDueDate) {
+        this.currentDueDate = currentDueDate;
+    }
+
     public LocalDate getDueDate() {
         return dueDate;
     }
 
     public void setDueDate(LocalDate dueDate) {
         this.dueDate = dueDate;
+    }
+
+    public Integer getCurrentSubmissionId() {
+        return currentSubmissionId;
+    }
+
+    public void setCurrentSubmissionId(Integer currentSubmissionId) {
+        this.currentSubmissionId = currentSubmissionId;
     }
 
     public Integer getTaskStatus() {
@@ -115,12 +154,36 @@ public class EmpTaskVO {
         this.canFinish = canFinish;
     }
 
+    public Integer getFinishByAccountId() {
+        return finishByAccountId;
+    }
+
+    public void setFinishByAccountId(Integer finishByAccountId) {
+        this.finishByAccountId = finishByAccountId;
+    }
+
+    public String getFinishByName() {
+        return finishByName;
+    }
+
+    public void setFinishByName(String finishByName) {
+        this.finishByName = finishByName;
+    }
+
     public LocalDateTime getFinishTime() {
         return finishTime;
     }
 
     public void setFinishTime(LocalDateTime finishTime) {
         this.finishTime = finishTime;
+    }
+
+    public Integer getVersion() {
+        return version;
+    }
+
+    public void setVersion(Integer version) {
+        this.version = version;
     }
 
     public Integer taskId() {

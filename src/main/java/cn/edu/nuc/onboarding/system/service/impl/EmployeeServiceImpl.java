@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -63,7 +64,13 @@ public class EmployeeServiceImpl implements EmployeeService {
                 EmpTask task = new EmpTask();
                 task.setEmpId(employee.getEmpId());
                 task.setTplId(template.getTplId());
+                task.setAssignedDept(template.getDutyDept());
+                LocalDate dueDate = employee.getEntryTime().toLocalDate()
+                        .plusDays(template.getOffsetDay() == null ? 0 : template.getOffsetDay());
+                task.setBaseDueDate(dueDate);
+                task.setCurrentDueDate(dueDate);
                 task.setTaskStatus(0);
+                task.setVersion(0);
                 tasks.add(task);
             }
             empTaskMapper.batchInsert(tasks);

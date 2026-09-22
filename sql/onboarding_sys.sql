@@ -5,6 +5,8 @@ CREATE DATABASE IF NOT EXISTS onboarding_sys
 USE onboarding_sys;
 
 SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS task_attachment;
+DROP TABLE IF EXISTS task_action;
 DROP TABLE IF EXISTS auth_session;
 DROP TABLE IF EXISTS phone_verification;
 DROP TABLE IF EXISTS user_account;
@@ -80,14 +82,62 @@ CREATE TABLE emp_task (
     taskId INT PRIMARY KEY AUTO_INCREMENT COMMENT '员工任务主键',
     empId INT NOT NULL COMMENT '关联employee员工编号',
     tplId INT NOT NULL COMMENT '关联task_template任务模板编号',
-    taskStatus TINYINT(1) NOT NULL DEFAULT 0 COMMENT '任务状态：0未完成，1已完成',
-    finishTime DATETIME DEFAULT NULL COMMENT '任务完成时间',
+    assignedDept VARCHAR(50) NOT NULL COMMENT '建档时分配的责任部门快照',
+    baseDueDate DATE NOT NULL COMMENT '按模板和入职日期计算的原始截止日期',
+    currentDueDate DATE NOT NULL COMMENT '当前截止日期，退回后可调整',
+    currentSubmissionId INT DEFAULT NULL COMMENT '当前待确认或已确认的操作记录编号',
+    taskStatus TINYINT(1) NOT NULL DEFAULT 0 COMMENT '任务状态：0待员工处理，1待部门确认，2已完成，3已退回',
+    finishByAccountId INT DEFAULT NULL COMMENT '最终确认人账号编号',
+    finishByName VARCHAR(50) DEFAULT NULL COMMENT '最终确认人名称快照',
+    finishTime DATETIME DEFAULT NULL COMMENT '部门确认完成时间',
+    version INT NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
     INDEX idx_emp_task_emp_id (empId),
     INDEX idx_emp_task_tpl_id (tplId),
+    INDEX idx_emp_task_assigned_dept (assignedDept),
     INDEX idx_emp_task_status (taskStatus),
+    INDEX idx_emp_task_current_due_date (currentDueDate),
     CONSTRAINT fk_emp_task_employee FOREIGN KEY (empId) REFERENCES employee(empId),
     CONSTRAINT fk_emp_task_template FOREIGN KEY (tplId) REFERENCES task_template(tplId)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='员工个人任务表';
+
+CREATE TABLE task_action (
+    actionId INT PRIMARY KEY AUTO_INCREMENT COMMENT '任务操作记录编号',
+    taskId INT NOT NULL COMMENT '关联员工任务编号',
+    actionType VARCHAR(20) NOT NULL COMMENT 'SUBMIT、CONFIRM或REJECT',
+    actorAccountId INT NOT NULL COMMENT '操作账号编号',
+    actorNameSnapshot VARCHAR(50) NOT NULL COMMENT '操作人名称快照',
+    actionTime DATETIME NOT NULL COMMENT '操作时间',
+    reason VARCHAR(500) DEFAULT NULL COMMENT '退回原因',
+    newDueDate DATE DEFAULT NULL COMMENT '退回后的新截止日期',
+    relatedSubmissionId INT DEFAULT NULL COMMENT '关联的提交记录编号',
+    INDEX idx_task_action_task_time (taskId, actionTime),
+    CONSTRAINT fk_task_action_task
+        FOREIGN KEY (taskId) REFERENCES emp_task(taskId) ON DELETE CASCADE,
+    CONSTRAINT fk_task_action_actor
+        FOREIGN KEY (actorAccountId) REFERENCES user_account(accountId)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='任务操作历史表';
+
+CREATE TABLE task_attachment (
+    attachmentId INT PRIMARY KEY AUTO_INCREMENT COMMENT '附件编号',
+    taskId INT NOT NULL COMMENT '关联员工任务编号',
+    actionId INT NOT NULL COMMENT '关联任务操作记录编号',
+    originalName VARCHAR(255) NOT NULL COMMENT '原始文件名',
+    storageName VARCHAR(100) NOT NULL COMMENT '随机存储文件名',
+    relativePath VARCHAR(500) NOT NULL COMMENT '相对存储路径',
+    contentType VARCHAR(100) NOT NULL COMMENT '文件媒体类型',
+    fileSize BIGINT NOT NULL COMMENT '文件字节数',
+    uploaderAccountId INT NOT NULL COMMENT '上传账号编号',
+    uploadTime DATETIME NOT NULL COMMENT '上传时间',
+    UNIQUE KEY uk_task_attachment_storage (storageName),
+    INDEX idx_task_attachment_task (taskId),
+    INDEX idx_task_attachment_action (actionId),
+    CONSTRAINT fk_task_attachment_task
+        FOREIGN KEY (taskId) REFERENCES emp_task(taskId) ON DELETE CASCADE,
+    CONSTRAINT fk_task_attachment_action
+        FOREIGN KEY (actionId) REFERENCES task_action(actionId) ON DELETE CASCADE,
+    CONSTRAINT fk_task_attachment_uploader
+        FOREIGN KEY (uploaderAccountId) REFERENCES user_account(accountId)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='任务附件表';
 
 INSERT INTO task_template(taskName, dutyDept, offsetDay) VALUES
 ('提交入职材料', '人事部', 0),

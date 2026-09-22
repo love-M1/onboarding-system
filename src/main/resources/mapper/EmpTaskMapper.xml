@@ -56,12 +56,52 @@
     </sql>
 
     <insert id="batchInsert">
-        INSERT INTO emp_task(empId, tplId, taskStatus, finishTime)
+        INSERT INTO emp_task(
+            empId, tplId, assignedDept, baseDueDate, currentDueDate,
+            currentSubmissionId, taskStatus, finishByAccountId, finishByName,
+            finishTime, version
+        )
         VALUES
         <foreach collection="list" item="item" separator=",">
-            (#{item.empId}, #{item.tplId}, #{item.taskStatus}, #{item.finishTime})
+            (
+                #{item.empId}, #{item.tplId}, #{item.assignedDept},
+                #{item.baseDueDate}, #{item.currentDueDate}, #{item.currentSubmissionId},
+                #{item.taskStatus}, #{item.finishByAccountId}, #{item.finishByName},
+                #{item.finishTime}, #{item.version}
+            )
         </foreach>
     </insert>
+
+    <insert id="insertSnapshotTask" useGeneratedKeys="true" keyProperty="taskId">
+        INSERT INTO emp_task(
+            empId, tplId, assignedDept, baseDueDate, currentDueDate,
+            currentSubmissionId, taskStatus, finishByAccountId, finishByName,
+            finishTime, version
+        )
+        VALUES (
+            #{empId}, #{tplId}, #{assignedDept}, #{baseDueDate}, #{currentDueDate},
+            #{currentSubmissionId}, #{taskStatus}, #{finishByAccountId}, #{finishByName},
+            #{finishTime}, #{version}
+        )
+    </insert>
+
+    <select id="selectById" resultType="cn.edu.nuc.onboarding.system.entity.EmpTask">
+        SELECT
+            taskId,
+            empId,
+            tplId,
+            assignedDept,
+            baseDueDate,
+            currentDueDate,
+            currentSubmissionId,
+            taskStatus,
+            finishByAccountId,
+            finishByName,
+            finishTime,
+            version
+        FROM emp_task
+        WHERE taskId = #{taskId}
+    </select>
 
     <select id="selectTaskPage" resultType="cn.edu.nuc.onboarding.system.vo.EmpTaskVO">
         SELECT <include refid="taskColumns"/>

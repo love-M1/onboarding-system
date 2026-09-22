@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.edu.nuc.onboarding.system.mapper.TaskAttachmentMapper">
+
+    <sql id="attachmentColumns">
+        attachmentId,
+        taskId,
+        actionId,
+        originalName,
+        storageName,
+        relativePath,
+        contentType,
+        fileSize,
+        uploaderAccountId,
+        uploadTime
+    </sql>
+
+    <insert id="insertBatch">
+        INSERT INTO task_attachment(
+            taskId, actionId, originalName, storageName, relativePath,
+            contentType, fileSize, uploaderAccountId, uploadTime
+        )
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+                #{item.taskId}, #{item.actionId}, #{item.originalName}, #{item.storageName},
+                #{item.relativePath}, #{item.contentType}, #{item.fileSize},
+                #{item.uploaderAccountId}, #{item.uploadTime}
+            )
+        </foreach>
+    </insert>
+
+    <select id="selectByActionId" resultType="cn.edu.nuc.onboarding.system.entity.TaskAttachment">
+        SELECT <include refid="attachmentColumns"/>
+        FROM task_attachment
+        WHERE actionId = #{actionId}
+        ORDER BY attachmentId ASC
+    </select>
+
+    <select id="selectByTaskId" resultType="cn.edu.nuc.onboarding.system.entity.TaskAttachment">
+        SELECT <include refid="attachmentColumns"/>
+        FROM task_attachment
+        WHERE taskId = #{taskId}
+        ORDER BY uploadTime ASC, attachmentId ASC
+    </select>
+
+    <select id="selectById" resultType="cn.edu.nuc.onboarding.system.entity.TaskAttachment">
+        SELECT <include refid="attachmentColumns"/>
+        FROM task_attachment
+        WHERE attachmentId = #{attachmentId}
+    </select>
+</mapper>
