@@ -41,6 +41,9 @@ public final class ErrorCode {
     public static final int PASSWORD_INVALID = 5009;
     public static final int LOGIN_FAILED = 5010;
     public static final int ACCOUNT_DISABLED = 5011;
+    public static final int DEPARTMENT_OWNER_NOT_FOUND = 5012;
+    public static final int DEPARTMENT_OWNER_EXISTS = 5013;
+    public static final int DEPARTMENT_OWNER_STATUS_INVALID = 5014;
 
     private ErrorCode() {
     }

@@ -66,6 +66,7 @@ public class RoleInterceptor implements HandlerInterceptor {
         return path.startsWith("/api/templates")
                 || path.startsWith("/api/employees")
                 || path.startsWith("/api/stats")
+                || path.startsWith("/api/department-owners")
                 || path.equals("/api/tasks/overdue");
     }
 

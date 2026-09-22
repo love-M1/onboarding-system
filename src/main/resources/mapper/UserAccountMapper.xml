@@ -31,17 +31,40 @@
         WHERE phone = #{phone}
     </select>
 
+    <select id="selectDepartmentOwners" resultType="cn.edu.nuc.onboarding.system.entity.UserAccount">
+        SELECT <include refid="accountColumns"/>
+        FROM user_account
+        WHERE role = 'DEPARTMENT'
+        ORDER BY department ASC, accountId ASC
+    </select>
+
+    <select id="countEnabledDepartmentOwner" resultType="long">
+        SELECT COUNT(*)
+        FROM user_account
+        WHERE role = 'DEPARTMENT'
+          AND status = 'ACTIVE'
+          AND department = #{department}
+        <if test="excludeAccountId != null">
+          AND accountId != #{excludeAccountId}
+        </if>
+    </select>
+
+    <update id="updateDepartmentOwner">
+        UPDATE user_account
+        SET phone = #{phone},
+            displayName = #{displayName},
+            department = #{department},
+            status = #{status},
+            updateTime = #{updateTime}
+        WHERE accountId = #{accountId}
+          AND role = 'DEPARTMENT'
+    </update>
+
     <update id="updatePassword">
         UPDATE user_account
         SET passwordHash = #{passwordHash},
-            updateTime = CURRENT_TIMESTAMP
+            updateTime = #{updateTime}
         WHERE accountId = #{accountId}
-    </update>
-
-    <update id="updateStatus">
-        UPDATE user_account
-        SET status = #{status},
-            updateTime = CURRENT_TIMESTAMP
-        WHERE accountId = #{accountId}
+          AND role = 'DEPARTMENT'
     </update>
 </mapper>
