@@ -39,6 +39,12 @@ public interface EmpTaskMapper {
 
     int finishTask(@Param("taskId") Integer taskId, @Param("finishTime") LocalDateTime finishTime);
 
+    int submitTask(
+            @Param("taskId") Integer taskId,
+            @Param("currentSubmissionId") Integer currentSubmissionId,
+            @Param("version") Integer version
+    );
+
     int countUnfinishedByEmpId(@Param("empId") Integer empId);
 
     int deleteByEmpId(@Param("empId") Integer empId);

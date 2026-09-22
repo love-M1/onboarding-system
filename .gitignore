@@ -6,6 +6,7 @@ target/
 frontend/node_modules/
 frontend/dist/
 logs/
+uploads/
 *.log
 .env
 .env.*

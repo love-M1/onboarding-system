@@ -145,6 +145,16 @@
           AND taskStatus = 0
     </update>
 
+    <update id="submitTask">
+        UPDATE emp_task
+        SET currentSubmissionId = #{currentSubmissionId},
+            taskStatus = 1,
+            version = version + 1
+        WHERE taskId = #{taskId}
+          AND taskStatus IN (0, 3)
+          AND version = #{version}
+    </update>
+
     <select id="countUnfinishedByEmpId" resultType="int">
         SELECT COUNT(*)
         FROM emp_task
