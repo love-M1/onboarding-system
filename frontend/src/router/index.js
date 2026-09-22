@@ -8,6 +8,7 @@ import EmployeeDetailView from '../views/EmployeeDetailView.vue'
 import TaskView from '../views/TaskView.vue'
 import StatsView from '../views/StatsView.vue'
 import ArchiveView from '../views/ArchiveView.vue'
+import DepartmentOwnerView from '../views/DepartmentOwnerView.vue'
 
 const routes = [
   {
@@ -32,6 +33,12 @@ const routes = [
         name: 'employees',
         component: EmployeeView,
         meta: { title: '入职档案', roles: ['HR'] }
+      },
+      {
+        path: 'department-owners',
+        name: 'department-owners',
+        component: DepartmentOwnerView,
+        meta: { title: '部门责任人', roles: ['HR'] }
       },
       {
         path: 'employees/:empId',

@@ -6,6 +6,7 @@ import {
   Collection,
   DataAnalysis,
   FolderOpened,
+  Avatar,
   OfficeBuilding,
   SwitchButton,
   UserFilled
@@ -21,6 +22,7 @@ const menuItems = computed(() => {
     return [
       { path: '/templates', label: '任务模板', icon: Collection },
       { path: '/employees', label: '入职档案', icon: UserFilled },
+      { path: '/department-owners', label: '部门责任人', icon: Avatar },
       { path: '/stats', label: '进度汇总', icon: DataAnalysis },
       { path: '/archive', label: '归档管理', icon: FolderOpened }
     ]

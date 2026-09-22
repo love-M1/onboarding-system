@@ -478,6 +478,10 @@ a {
   grid-template-columns: repeat(3, minmax(160px, 230px)) auto auto;
 }
 
+.owner-filter-bar {
+  grid-template-columns: minmax(240px, 360px) auto;
+}
+
 .filter-bar .el-input,
 .filter-bar .el-select {
   width: 100%;
