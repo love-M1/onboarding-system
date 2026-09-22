@@ -4,6 +4,9 @@ import cn.edu.nuc.onboarding.system.entity.UserAccount;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 @Mapper
 public interface UserAccountMapper {
 
@@ -13,7 +16,18 @@ public interface UserAccountMapper {
 
     UserAccount selectByPhone(@Param("phone") String phone);
 
-    int updatePassword(@Param("accountId") Integer accountId, @Param("passwordHash") String passwordHash);
+    List<UserAccount> selectDepartmentOwners();
 
-    int updateStatus(@Param("accountId") Integer accountId, @Param("status") String status);
+    long countEnabledDepartmentOwner(
+            @Param("department") String department,
+            @Param("excludeAccountId") Integer excludeAccountId
+    );
+
+    int updateDepartmentOwner(UserAccount account);
+
+    int updatePassword(
+            @Param("accountId") Integer accountId,
+            @Param("passwordHash") String passwordHash,
+            @Param("updateTime") LocalDateTime updateTime
+    );
 }

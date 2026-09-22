@@ -90,6 +90,8 @@ export const useAuthStore = defineStore('auth', () => {
       if (token.value) {
         await authApi.logout()
       }
+    } catch {
+      // Local logout must still complete when the session has already expired.
     } finally {
       clear()
     }

@@ -15,6 +15,10 @@ public interface EmpTaskMapper {
 
     int batchInsert(@Param("list") List<EmpTask> tasks);
 
+    int insertSnapshotTask(EmpTask task);
+
+    EmpTask selectById(@Param("taskId") Integer taskId);
+
     List<EmpTaskVO> selectTaskPage(
             @Param("empId") Integer empId,
             @Param("department") String department,
@@ -33,7 +37,25 @@ public interface EmpTaskMapper {
 
     EmpTaskVO selectTaskDetail(@Param("taskId") Integer taskId);
 
-    int finishTask(@Param("taskId") Integer taskId, @Param("finishTime") LocalDateTime finishTime);
+    int submitTask(
+            @Param("taskId") Integer taskId,
+            @Param("currentSubmissionId") Integer currentSubmissionId,
+            @Param("version") Integer version
+    );
+
+    int confirmTask(
+            @Param("taskId") Integer taskId,
+            @Param("accountId") Integer accountId,
+            @Param("finishByName") String finishByName,
+            @Param("finishTime") LocalDateTime finishTime,
+            @Param("version") Integer version
+    );
+
+    int rejectTask(
+            @Param("taskId") Integer taskId,
+            @Param("newDueDate") java.time.LocalDate newDueDate,
+            @Param("version") Integer version
+    );
 
     int countUnfinishedByEmpId(@Param("empId") Integer empId);
 

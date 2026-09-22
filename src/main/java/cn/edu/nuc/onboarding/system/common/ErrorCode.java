@@ -24,6 +24,15 @@ public final class ErrorCode {
     public static final int TASK_ALREADY_FINISHED = 3002;
     public static final int ENTRY_TIME_NOT_REACHED = 3003;
     public static final int EMPLOYEE_ARCHIVED = 3004;
+    public static final int TASK_SUBMISSION_NOT_ALLOWED = 3005;
+    public static final int TASK_SUBMISSION_FILE_REQUIRED = 3006;
+    public static final int TASK_FILE_TYPE_INVALID = 3007;
+    public static final int TASK_FILE_TOO_LARGE = 3008;
+    public static final int TASK_TOO_MANY_FILES = 3009;
+    public static final int TASK_ATTACHMENT_NOT_FOUND = 3010;
+    public static final int TASK_CONFIRM_NOT_ALLOWED = 3011;
+    public static final int TASK_REJECTION_INVALID = 3012;
+    public static final int TASK_REJECT_NOT_ALLOWED = 3013;
 
     public static final int UNFINISHED_TASKS_ARCHIVE = 4001;
     public static final int UNFINISHED_TASKS_DELETE = 4002;
@@ -41,6 +50,9 @@ public final class ErrorCode {
     public static final int PASSWORD_INVALID = 5009;
     public static final int LOGIN_FAILED = 5010;
     public static final int ACCOUNT_DISABLED = 5011;
+    public static final int DEPARTMENT_OWNER_NOT_FOUND = 5012;
+    public static final int DEPARTMENT_OWNER_EXISTS = 5013;
+    public static final int DEPARTMENT_OWNER_STATUS_INVALID = 5014;
 
     private ErrorCode() {
     }

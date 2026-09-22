@@ -23,6 +23,14 @@
         WHERE tplId = #{tplId}
     </select>
 
+    <select id="selectDistinctDutyDepartments" resultType="java.lang.String">
+        SELECT DISTINCT dutyDept
+        FROM task_template
+        WHERE dutyDept IS NOT NULL
+          AND TRIM(dutyDept) != ''
+        ORDER BY dutyDept
+    </select>
+
     <insert id="insert" useGeneratedKeys="true" keyProperty="tplId">
         INSERT INTO task_template(taskName, dutyDept, offsetDay)
         VALUES (#{taskName}, #{dutyDept}, #{offsetDay})

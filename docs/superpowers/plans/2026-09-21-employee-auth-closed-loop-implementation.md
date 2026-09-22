@@ -1,6 +1,6 @@
 # Employee Authentication Closed Loop Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add verified phone registration, password login, token authorization, and employee-owned task confirmation so HR can onboard an employee and that employee can complete the generated tasks from their own account.
 
@@ -60,7 +60,7 @@
   - `PhoneVerificationMapper.insert(PhoneVerification)`, `selectLatestActive(String, LocalDateTime)`, `markUsed(Integer, LocalDateTime)`, `incrementAttempt(Integer)`, `deleteExpired(LocalDateTime)`.
   - `AuthSessionMapper.insert(AuthSession)`, `selectValidByTokenHash(String, LocalDateTime)`, `touch(Integer, LocalDateTime)`, `deleteByTokenHash(String)`.
 
-- [ ] **Step 1: Add the failing persistence test**
+- [x] **Step 1: Add the failing persistence test**
 
 Create `AuthPersistenceTest.java`:
 
@@ -138,7 +138,7 @@ class AuthPersistenceTest {
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run:
 
@@ -148,7 +148,7 @@ mvn -Dtest=AuthPersistenceTest test
 
 Expected: compilation failure because the three entity and mapper types do not exist.
 
-- [ ] **Step 3: Add the BCrypt dependency and error codes**
+- [x] **Step 3: Add the BCrypt dependency and error codes**
 
 Add to `pom.xml`:
 
@@ -181,7 +181,7 @@ public static final int LOGIN_FAILED = 5010;
 public static final int ACCOUNT_DISABLED = 5011;
 ```
 
-- [ ] **Step 4: Add the MySQL and H2 schema**
+- [x] **Step 4: Add the MySQL and H2 schema**
 
 In `sql/onboarding_sys.sql`, drop auth tables before dropping business tables:
 
@@ -238,11 +238,11 @@ CREATE TABLE auth_session (
 
 Apply equivalent H2-compatible DDL to `src/test/resources/schema-test.sql`. Drop auth tables before employee tables and add `UNIQUE(empPhone)` to the employee table.
 
-- [ ] **Step 5: Add entity classes and mapper interfaces**
+- [x] **Step 5: Add entity classes and mapper interfaces**
 
 Create the three Java entities with fields exactly matching the mapper result columns and ordinary getters/setters. Create mapper interfaces with the signatures listed in **Interfaces**.
 
-- [ ] **Step 6: Add mapper XML**
+- [x] **Step 6: Add mapper XML**
 
 Implement `UserAccountMapper.xml` with `useGeneratedKeys="true" keyProperty="accountId"`, exact column mappings, and these conditions:
 
@@ -280,7 +280,7 @@ Implement `AuthSessionMapper.xml` with:
 </select>
 ```
 
-- [ ] **Step 7: Run persistence tests**
+- [x] **Step 7: Run persistence tests**
 
 Run:
 
@@ -314,7 +314,7 @@ Expected: `BUILD SUCCESS`.
   - `SessionServiceImpl.revoke(String rawToken): void`.
   - `IssuedSession(String token, LocalDateTime expiresAt)`.
 
-- [ ] **Step 1: Write failing session tests**
+- [x] **Step 1: Write failing session tests**
 
 Create `SessionServiceTest.java`:
 
@@ -379,7 +379,7 @@ class SessionServiceTest {
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run:
 
@@ -389,7 +389,7 @@ mvn -Dtest=SessionServiceTest test
 
 Expected: compilation failure because `SessionService` and `AuthProperties` do not exist.
 
-- [ ] **Step 3: Add configuration properties**
+- [x] **Step 3: Add configuration properties**
 
 Add to both application YAML files:
 
@@ -408,7 +408,7 @@ app:
 
 Implement `AuthProperties` as a `@Component` with `@ConfigurationProperties(prefix = "app.auth")` and the exact getters/setters needed by these fields.
 
-- [ ] **Step 4: Add BCrypt bean**
+- [x] **Step 4: Add BCrypt bean**
 
 Create `SecurityBeansConfig`:
 
@@ -423,7 +423,7 @@ public class SecurityBeansConfig {
 }
 ```
 
-- [ ] **Step 5: Implement session service**
+- [x] **Step 5: Implement session service**
 
 Use `SecureRandom` to generate 32 random bytes, encode with URL-safe Base64 without padding, and store a lowercase 64-character SHA-256 hex hash. `issue` inserts an `AuthSession`, `authenticate` loads the token hash and associated active account, updates `lastAccessTime`, and `revoke` deletes by token hash.
 
@@ -433,7 +433,7 @@ The invalid-token exception must be:
 throw new BizException(ErrorCode.UNAUTHORIZED, "登录状态已失效，请重新登录");
 ```
 
-- [ ] **Step 6: Run session tests**
+- [x] **Step 6: Run session tests**
 
 Run:
 
@@ -467,7 +467,7 @@ Expected: `BUILD SUCCESS`.
   - `VerificationCodeVO(int expiresIn, int resendAfter, String devCode)`.
   - Public endpoint `POST /api/auth/verification-codes`.
 
-- [ ] **Step 1: Write failing MockMvc tests**
+- [x] **Step 1: Write failing MockMvc tests**
 
 Create `VerificationCodeFlowTest.java` with two tests:
 
@@ -516,7 +516,7 @@ class VerificationCodeFlowTest {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run:
 
@@ -526,7 +526,7 @@ mvn -Dtest=VerificationCodeFlowTest test
 
 Expected: `POST /api/auth/verification-codes` returns 404 or the required types are missing.
 
-- [ ] **Step 3: Add employee lookup and DTO/VO**
+- [x] **Step 3: Add employee lookup and DTO/VO**
 
 Add to `EmployeeMapper`:
 
@@ -548,13 +548,13 @@ public record VerificationCodeVO(int expiresIn, int resendAfter, String devCode)
 }
 ```
 
-- [ ] **Step 4: Implement requestVerificationCode**
+- [x] **Step 4: Implement requestVerificationCode**
 
 Validate the phone with `^1[3-9]\\d{9}$`. Reject an existing account with `ACCOUNT_ALREADY_EXISTS`. Require exactly one unarchived employee record for the phone; otherwise throw `EMPLOYEE_NOT_REGISTERABLE` with `请先由 HR 完成员工建档`.
 
 Enforce the 60-second resend cooldown using the latest verification row. Generate a code with `SecureRandom.nextInt(1_000_000)` formatted as six digits and insert the verification row. Set `devCode` only when `AuthProperties.getExposeCode()` is true.
 
-- [ ] **Step 5: Add the public controller method**
+- [x] **Step 5: Add the public controller method**
 
 Create `AuthController` with:
 
@@ -568,7 +568,7 @@ public ApiResponse<VerificationCodeVO> requestVerificationCode(
 
 Exclude only `/api/auth/verification-codes`, `/api/auth/register`, and `/api/auth/login` from `RoleInterceptor`.
 
-- [ ] **Step 6: Run verification tests**
+- [x] **Step 6: Run verification tests**
 
 Run:
 
@@ -607,7 +607,7 @@ Expected: `BUILD SUCCESS`.
   - Public endpoints `/api/auth/register`, `/api/auth/login`, authenticated endpoints `/api/auth/me`, `/api/auth/logout`.
   - Bootstrap HR account created at application startup when absent.
 
-- [ ] **Step 1: Write the failing auth flow test**
+- [x] **Step 1: Write the failing auth flow test**
 
 Create `AuthFlowIntegrationTest` using `MockMvc` and these assertions in one test:
 
@@ -632,7 +632,7 @@ private String jsonString(MvcResult result, String pointer) throws Exception {
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run:
 
@@ -642,7 +642,7 @@ mvn -Dtest=AuthFlowIntegrationTest test
 
 Expected: compilation failure or HTTP 404 for registration/login endpoints.
 
-- [ ] **Step 3: Implement registration validation**
+- [x] **Step 3: Implement registration validation**
 
 Use these exact validation rules:
 
@@ -656,13 +656,13 @@ Use these exact validation rules:
 
 Registration must be transactional and must insert the account before issuing a session.
 
-- [ ] **Step 4: Implement login, current user, and logout**
+- [x] **Step 4: Implement login, current user, and logout**
 
 Login rejects missing accounts, disabled accounts, and password mismatches with `LOGIN_FAILED` and `手机号或密码错误`. Password matching uses `PasswordEncoder.matches(raw, hash)`.
 
 `currentUser()` reads `AuthContext`; if absent, throw `UNAUTHORIZED`. `logout(rawToken)` calls `SessionService.revoke`.
 
-- [ ] **Step 5: Implement the controller methods**
+- [x] **Step 5: Implement the controller methods**
 
 Add:
 
@@ -691,11 +691,11 @@ public ApiResponse<Void> logout(@RequestHeader("Authorization") String authoriza
 
 Validate the authorization header before substring.
 
-- [ ] **Step 6: Implement HR bootstrap**
+- [x] **Step 6: Implement HR bootstrap**
 
 Create an `ApplicationRunner` bean that checks `UserAccountMapper.selectByPhone(bootstrapHrPhone)`. When absent, insert an `HR` account with a BCrypt hash generated from `bootstrapHrPassword`, display name from properties, `status = ACTIVE`, and current timestamps. When present, do not update the password.
 
-- [ ] **Step 7: Run auth flow tests**
+- [x] **Step 7: Run auth flow tests**
 
 Run:
 
@@ -728,7 +728,7 @@ Expected: `BUILD SUCCESS`.
   - `AuthUser.isHr()`, `isEmployee()`, `isDepartment()`.
   - Bearer-token interceptor for every `/api/**` path except the three public auth endpoints.
 
-- [ ] **Step 1: Rewrite `RoleInterceptorTest` to assert token behavior**
+- [x] **Step 1: Rewrite `RoleInterceptorTest` to assert token behavior**
 
 Use a mocked `SessionService` and these cases:
 
@@ -766,7 +766,7 @@ void xRoleHeaderWithoutTokenIsRejected() {
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run:
 
@@ -776,7 +776,7 @@ mvn -Dtest=RoleInterceptorTest test
 
 Expected: compilation failure or old header behavior does not produce 401.
 
-- [ ] **Step 3: Extend `AuthUser` and rewrite interceptor**
+- [x] **Step 3: Extend `AuthUser` and rewrite interceptor**
 
 Add the six-component record and a compatibility constructor:
 
@@ -817,7 +817,7 @@ Rewrite `RoleInterceptor` to:
 - Set `AuthContext` from the account.
 - Clear context in `afterCompletion`.
 
-- [ ] **Step 4: Configure public paths**
+- [x] **Step 4: Configure public paths**
 
 In `WebConfig`, register the interceptor for `/api/**` and exclude:
 
@@ -829,7 +829,7 @@ In `WebConfig`, register the interceptor for `/api/**` and exclude:
 
 `/api/auth/me` and `/api/auth/logout` must pass through the interceptor.
 
-- [ ] **Step 5: Update API contract authentication**
+- [x] **Step 5: Update API contract authentication**
 
 In `ApiContractTest`, login through the bootstrap HR account and use the returned token instead of `X-Role`.
 
@@ -862,7 +862,7 @@ Expected: `BUILD SUCCESS`.
   - Employee finish checks task ownership before update.
   - Employee creation validates phone format and uniqueness.
 
-- [ ] **Step 1: Write failing employee ownership tests**
+- [x] **Step 1: Write failing employee ownership tests**
 
 Create tests that:
 
@@ -888,7 +888,7 @@ void rejectsDuplicateAndInvalidEmployeePhone() {
 }
 ```
 
-- [ ] **Step 2: Run ownership tests to verify they fail**
+- [x] **Step 2: Run ownership tests to verify they fail**
 
 Run:
 
@@ -898,7 +898,7 @@ mvn -Dtest=EmployeeTaskAuthorizationTest,EmployeeCreationTest test
 
 Expected: employee sees unrelated tasks, employee can finish unrelated tasks, or invalid/duplicate phones are accepted.
 
-- [ ] **Step 3: Enforce phone validation and uniqueness**
+- [x] **Step 3: Enforce phone validation and uniqueness**
 
 In `EmployeeServiceImpl.validateEmployee`:
 
@@ -908,7 +908,7 @@ In `EmployeeServiceImpl.validateEmployee`:
 
 Add `countByPhone` to `EmployeeMapper` and implement `SELECT COUNT(*) FROM employee WHERE empPhone = #{phone}`.
 
-- [ ] **Step 4: Enforce employee task ownership**
+- [x] **Step 4: Enforce employee task ownership**
 
 In `TaskServiceImpl.listTasks`, when the current user is `EMPLOYEE`, replace any request `empId` with `user.empId()`. If `user.empId()` is null, throw `FORBIDDEN`.
 
@@ -923,7 +923,7 @@ if (user != null && user.isEmployee()
 
 Keep the existing department permission and date rules.
 
-- [ ] **Step 5: Run focused task tests**
+- [x] **Step 5: Run focused task tests**
 
 Run:
 
@@ -956,7 +956,7 @@ Expected: `BUILD SUCCESS`.
   - Computed properties `isHr`, `isEmployee`, `isDepartment`, `isLoggedIn`, `homePath`.
   - Bearer token request header and 401 cleanup.
 
-- [ ] **Step 1: Add the frontend auth API**
+- [x] **Step 1: Add the frontend auth API**
 
 Create `frontend/src/api/auth.js`:
 
@@ -984,7 +984,7 @@ export function logout() {
 }
 ```
 
-- [ ] **Step 2: Replace the Pinia auth store**
+- [x] **Step 2: Replace the Pinia auth store**
 
 Persist the full auth result under `onboarding-auth`. Implement `homePath` as:
 
@@ -996,7 +996,7 @@ const homePath = computed(() => (role.value === 'HR' ? '/templates' : '/tasks'))
 
 `logout()` calls the API best-effort, then always clears local state.
 
-- [ ] **Step 3: Switch Axios to Bearer authentication**
+- [x] **Step 3: Switch Axios to Bearer authentication**
 
 Replace role headers with:
 
@@ -1008,7 +1008,7 @@ if (auth.token) {
 
 On a response code or HTTP status of 401, clear the auth store and redirect with `window.location.replace('/login')`. Avoid importing the router into `http.js`.
 
-- [ ] **Step 4: Rebuild the login page**
+- [x] **Step 4: Rebuild the login page**
 
 Use Element Plus segmented buttons or tabs for `登录` and `注册`.
 
@@ -1028,7 +1028,7 @@ The send-code button must show a 60-second countdown and be disabled for an inva
 
 Registration validates that both password fields match before submission. Successful login or registration calls the store and routes to `auth.homePath`.
 
-- [ ] **Step 5: Update route guards**
+- [x] **Step 5: Update route guards**
 
 Replace role selection checks with:
 
@@ -1038,7 +1038,7 @@ Replace role selection checks with:
 - `/tasks` accepts `['HR', 'EMPLOYEE', 'DEPARTMENT']`.
 - Unauthorized roles redirect to `auth.homePath`.
 
-- [ ] **Step 6: Build the frontend**
+- [x] **Step 6: Build the frontend**
 
 Run:
 
@@ -1068,7 +1068,7 @@ Expected: Vite build succeeds with no unresolved imports or template errors.
   - Confirm-finish button enabled only when `row.canFinish` is true.
   - HR task view remains read-only for task completion.
 
-- [ ] **Step 1: Make TaskView role-aware**
+- [x] **Step 1: Make TaskView role-aware**
 
 Set the page heading and filters as follows:
 
@@ -1079,7 +1079,7 @@ const showFilters = computed(() => !auth.isEmployee)
 
 For employees, call `getTasks` without `empId` and `department`; backend ownership supplies the employee filter. Render the confirmation button only for employees or department users. HR must see a read-only status column.
 
-- [ ] **Step 2: Update the application shell**
+- [x] **Step 2: Update the application shell**
 
 For employee navigation return:
 
@@ -1091,11 +1091,11 @@ For employee navigation return:
 
 Use `auth.displayName` for avatars and labels. Display `员工任务工作台` for employees and `人事工作台` for HR. Logout calls `await auth.logout()` before routing to login.
 
-- [ ] **Step 3: Adjust responsive styles**
+- [x] **Step 3: Adjust responsive styles**
 
 Ensure the login panel, verification-code row, employee table actions, and navigation remain usable at 375 px, 768 px, and desktop widths without overlapping text or controls.
 
-- [ ] **Step 4: Run the production build**
+- [x] **Step 4: Run the production build**
 
 Run:
 
@@ -1121,7 +1121,7 @@ Expected: `BUILD SUCCESS` equivalent from Vite with generated assets.
 - Consumes: all prior tasks.
 - Produces: current setup instructions, demo credentials, verification-code behavior, and documented end-to-end acceptance evidence.
 
-- [ ] **Step 1: Update setup documentation**
+- [x] **Step 1: Update setup documentation**
 
 Document:
 
@@ -1132,11 +1132,11 @@ Document:
 - New login and registration flow.
 - Employee registration requirement that HR must create the employee record first.
 
-- [ ] **Step 2: Add acceptance cases**
+- [x] **Step 2: Add acceptance cases**
 
 Append the scenario from the spec to `docs/TEST-CASES.md`, including expected task count, ownership isolation, finish time update, and HR visibility after employee confirmation.
 
-- [ ] **Step 3: Run all backend tests**
+- [x] **Step 3: Run all backend tests**
 
 Run:
 
@@ -1146,7 +1146,7 @@ mvn clean test
 
 Expected: all tests pass, including the new auth and ownership tests.
 
-- [ ] **Step 4: Run the frontend build**
+- [x] **Step 4: Run the frontend build**
 
 Run:
 
@@ -1157,7 +1157,7 @@ npm run build
 
 Expected: successful production build.
 
-- [ ] **Step 5: Verify the complete scenario with the running application**
+- [x] **Step 5: Verify the complete scenario with the running application**
 
 Start MySQL, initialize the database, start backend and frontend, then verify:
 
@@ -1172,3 +1172,4 @@ Start MySQL, initialize the database, start backend and frontend, then verify:
 9. Log in as HR and verify the same task appears completed in the employee detail and statistics.
 
 If MySQL is unavailable, record that environment limitation explicitly; do not claim the manual browser scenario passed.
+

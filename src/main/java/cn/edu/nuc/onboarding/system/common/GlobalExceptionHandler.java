@@ -9,6 +9,7 @@ import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.Objects;
@@ -50,6 +51,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NoResourceFoundException.class)
     public ApiResponse<Void> handleNotFound() {
         return ApiResponse.failure(ErrorCode.NOT_FOUND, "访问的接口或资源不存在");
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ApiResponse<Void> handleMaxUploadSize() {
+        return ApiResponse.failure(ErrorCode.TASK_FILE_TOO_LARGE, "单个附件不能超过10MB");
     }
 
     @ExceptionHandler(Exception.class)

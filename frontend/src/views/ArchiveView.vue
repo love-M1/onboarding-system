@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete, FolderChecked, Refresh, Search, View } from '@element-plus/icons-vue'
 import { archiveEmployee, deleteEmployee, getEmployees } from '../api/employees'
+import { formatDate } from '../utils/date'
+import { waitForConfirmation } from '../utils/uiState'
 
 const router = useRouter()
 const loading = ref(false)
@@ -29,6 +31,8 @@ async function loadData() {
     })
     records.value = data.list
     total.value = data.total
+  } catch {
+    // The HTTP interceptor already presents the server error.
   } finally {
     loading.value = false
   }
@@ -51,25 +55,37 @@ function resetFilters() {
 }
 
 async function archive(row) {
-  await ElMessageBox.confirm(
+  const confirmed = await waitForConfirmation(() => ElMessageBox.confirm(
     `仅当“${row.empName}”的所有任务完成后才能归档。确认继续？`,
     '归档确认',
     { type: 'warning', confirmButtonText: '确认归档', cancelButtonText: '取消' }
-  )
-  await archiveEmployee(row.empId)
-  ElMessage.success('归档成功')
-  loadData()
+  ))
+  if (!confirmed) return
+
+  try {
+    await archiveEmployee(row.empId)
+    ElMessage.success('归档成功')
+    await loadData()
+  } catch {
+    // The HTTP interceptor already presents the server error.
+  }
 }
 
 async function remove(row) {
-  await ElMessageBox.confirm(
+  const confirmed = await waitForConfirmation(() => ElMessageBox.confirm(
     `确认删除“${row.empName}”的档案？存在未完成任务时后端会拒绝。`,
     '删除确认',
     { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' }
-  )
-  await deleteEmployee(row.empId)
-  ElMessage.success('删除成功')
-  loadData()
+  ))
+  if (!confirmed) return
+
+  try {
+    await deleteEmployee(row.empId)
+    ElMessage.success('删除成功')
+    await loadData()
+  } catch {
+    // The HTTP interceptor already presents the server error.
+  }
 }
 
 onMounted(loadData)
@@ -100,7 +116,11 @@ onMounted(loadData)
       <el-table-column prop="empName" label="员工姓名" min-width="120" />
       <el-table-column prop="empDepartment" label="所属部门" min-width="140" />
       <el-table-column prop="empPosition" label="岗位" min-width="140" />
-      <el-table-column prop="entryTime" label="入职时间" min-width="180" />
+      <el-table-column prop="entryTime" label="入职时间" min-width="180">
+        <template #default="{ row }">
+          {{ formatDate(row.entryTime) }}
+        </template>
+      </el-table-column>
       <el-table-column label="档案状态" width="110" align="center">
         <template #default="{ row }">
           <el-tag :type="row.isArchived === 1 ? 'info' : 'success'" effect="plain">

@@ -6,9 +6,13 @@ import cn.edu.nuc.onboarding.system.vo.AuthUserVO;
 import cn.edu.nuc.onboarding.system.vo.LoginResultVO;
 import cn.edu.nuc.onboarding.system.vo.VerificationCodeVO;
 
+import java.util.List;
+
 public interface AuthService {
 
     VerificationCodeVO requestVerificationCode(String phone);
+
+    List<String> listDepartmentOptions();
 
     LoginResultVO register(RegisterDTO dto);
 

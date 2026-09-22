@@ -3,6 +3,7 @@ package cn.edu.nuc.onboarding.system.service.impl;
 import cn.edu.nuc.onboarding.system.common.BizException;
 import cn.edu.nuc.onboarding.system.common.ErrorCode;
 import cn.edu.nuc.onboarding.system.config.AuthProperties;
+import cn.edu.nuc.onboarding.system.config.DepartmentProperties;
 import cn.edu.nuc.onboarding.system.dto.LoginDTO;
 import cn.edu.nuc.onboarding.system.dto.RegisterDTO;
 import cn.edu.nuc.onboarding.system.entity.Employee;
@@ -10,6 +11,7 @@ import cn.edu.nuc.onboarding.system.entity.PhoneVerification;
 import cn.edu.nuc.onboarding.system.entity.UserAccount;
 import cn.edu.nuc.onboarding.system.mapper.EmployeeMapper;
 import cn.edu.nuc.onboarding.system.mapper.PhoneVerificationMapper;
+import cn.edu.nuc.onboarding.system.mapper.TaskTemplateMapper;
 import cn.edu.nuc.onboarding.system.mapper.UserAccountMapper;
 import cn.edu.nuc.onboarding.system.security.AuthContext;
 import cn.edu.nuc.onboarding.system.security.AuthUser;
@@ -24,6 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 @Service
@@ -34,23 +38,29 @@ public class AuthServiceImpl implements AuthService {
 
     private final UserAccountMapper accountMapper;
     private final EmployeeMapper employeeMapper;
+    private final TaskTemplateMapper templateMapper;
     private final PhoneVerificationMapper verificationMapper;
     private final AuthProperties authProperties;
+    private final DepartmentProperties departmentProperties;
     private final SessionService sessionService;
     private final PasswordEncoder passwordEncoder;
 
     public AuthServiceImpl(
             UserAccountMapper accountMapper,
             EmployeeMapper employeeMapper,
+            TaskTemplateMapper templateMapper,
             PhoneVerificationMapper verificationMapper,
             AuthProperties authProperties,
+            DepartmentProperties departmentProperties,
             SessionService sessionService,
             PasswordEncoder passwordEncoder
     ) {
         this.accountMapper = accountMapper;
         this.employeeMapper = employeeMapper;
+        this.templateMapper = templateMapper;
         this.verificationMapper = verificationMapper;
         this.authProperties = authProperties;
+        this.departmentProperties = departmentProperties;
         this.sessionService = sessionService;
         this.passwordEncoder = passwordEncoder;
     }
@@ -106,11 +116,22 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<String> listDepartmentOptions() {
+        TreeSet<String> departments = new TreeSet<>();
+        addDepartments(departments, departmentProperties.getOptions());
+        addDepartments(departments, employeeMapper.selectDistinctDepartments());
+        addDepartments(departments, templateMapper.selectDistinctDutyDepartments());
+        return List.copyOf(departments);
+    }
+
+    @Override
     @Transactional
     public LoginResultVO register(RegisterDTO dto) {
         String phone = dto == null || dto.phone() == null ? "" : dto.phone().trim();
         String code = dto == null || dto.code() == null ? "" : dto.code().trim();
         String password = dto == null || dto.password() == null ? "" : dto.password();
+        String department = dto == null || dto.department() == null ? "" : dto.department().trim();
 
         validatePhone(phone);
         validatePassword(password);
@@ -126,6 +147,9 @@ public class AuthServiceImpl implements AuthService {
         Employee employee = employeeMapper.selectByPhone(phone);
         if (employee == null) {
             throw new BizException(ErrorCode.EMPLOYEE_NOT_REGISTERABLE, "员工档案不存在");
+        }
+        if (!department.isEmpty() && !department.equals(employee.getEmpDepartment())) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "所选部门与员工档案不一致");
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -225,6 +249,14 @@ public class AuthServiceImpl implements AuthService {
                 || !password.matches(".*[A-Za-z].*")
                 || !password.matches(".*\\d.*")) {
             throw new BizException(ErrorCode.PASSWORD_INVALID, "密码需为8至32位且同时包含字母和数字");
+        }
+    }
+
+    private void addDepartments(TreeSet<String> departments, List<String> candidates) {
+        for (String candidate : candidates) {
+            if (candidate != null && !candidate.isBlank()) {
+                departments.add(candidate.trim());
+            }
         }
     }
 }

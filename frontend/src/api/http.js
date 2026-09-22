@@ -24,6 +24,9 @@ function redirectToLogin() {
 
 http.interceptors.response.use(
   (response) => {
+    if (response.config?.responseType === 'blob') {
+      return response.data
+    }
     const payload = response.data
     if (payload?.code === 401) {
       redirectToLogin()

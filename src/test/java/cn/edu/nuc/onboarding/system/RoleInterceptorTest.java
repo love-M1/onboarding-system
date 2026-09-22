@@ -61,10 +61,10 @@ class RoleInterceptorTest {
     }
 
     @Test
-    void hrCannotConfirmEmployeeTask() {
+    void hrCannotReviewEmployeeTask() {
         when(sessionService.authenticate("hr-token"))
                 .thenReturn(account("HR", null, "人事部"));
-        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/tasks/1/finish");
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/tasks/1/confirm");
         request.addHeader("Authorization", "Bearer hr-token");
 
         assertThatThrownBy(() -> interceptor.preHandle(
@@ -72,6 +72,30 @@ class RoleInterceptorTest {
                 .isInstanceOf(BizException.class)
                 .extracting("code")
                 .isEqualTo(403);
+    }
+
+    @Test
+    void employeeCannotManageDepartmentOwners() {
+        when(sessionService.authenticate("employee-token"))
+                .thenReturn(account("EMPLOYEE", 7, "研发部"));
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/department-owners");
+        request.addHeader("Authorization", "Bearer employee-token");
+
+        assertThatThrownBy(() -> interceptor.preHandle(
+                request, new MockHttpServletResponse(), new Object()))
+                .isInstanceOf(BizException.class)
+                .extracting("code")
+                .isEqualTo(403);
+    }
+
+    @Test
+    void hrCanManageDepartmentOwners() {
+        when(sessionService.authenticate("hr-token"))
+                .thenReturn(account("HR", null, "人事部"));
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/department-owners");
+        request.addHeader("Authorization", "Bearer hr-token");
+
+        assertThat(interceptor.preHandle(request, new MockHttpServletResponse(), new Object())).isTrue();
     }
 
     private UserAccount account(String role, Integer empId, String department) {

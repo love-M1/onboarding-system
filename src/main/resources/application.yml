@@ -6,6 +6,10 @@ server:
 spring:
   application:
     name: onboarding-system
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 100MB
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: ${DB_URL:jdbc:mysql://127.0.0.1:3306/onboarding_sys?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true}
@@ -40,3 +44,10 @@ app:
     bootstrap-hr-phone: ${AUTH_HR_PHONE:13800000000}
     bootstrap-hr-password: ${AUTH_HR_PASSWORD:Admin@123}
     bootstrap-hr-name: ${AUTH_HR_NAME:人事管理员}
+  department:
+    options:
+      - 财务部
+      - 市场部
+      - 法务部
+  storage:
+    upload-dir: ${ONBOARDING_UPLOAD_DIR:uploads/onboarding}

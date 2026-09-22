@@ -9,15 +9,15 @@
         e.empName,
         et.tplId,
         tt.taskName,
-        tt.dutyDept,
+        et.assignedDept,
+        et.assignedDept AS dutyDept,
         e.entryTime,
-        CAST(TIMESTAMPADD(DAY, tt.offsetDay, e.entryTime) AS DATE) AS dueDate,
+        et.baseDueDate,
+        et.currentDueDate,
+        et.currentDueDate AS dueDate,
+        et.currentSubmissionId,
         et.taskStatus,
-        CASE
-            WHEN et.taskStatus = 0
-             AND CAST(TIMESTAMPADD(DAY, tt.offsetDay, e.entryTime) AS DATE) &lt; CURRENT_DATE
-            THEN 1 ELSE 0
-        END AS overdue,
+        <include refid="overdueFlag"/> AS overdue,
         e.isArchived AS archived,
         CASE
             WHEN e.isArchived = 0
@@ -25,7 +25,40 @@
              AND DATE(e.entryTime) &lt;= CURRENT_DATE
             THEN 1 ELSE 0
         END AS canFinish,
-        et.finishTime
+        et.finishByAccountId,
+        et.finishByName,
+        et.finishTime,
+        et.version
+    </sql>
+
+    <sql id="overdueFlag">
+        CASE
+            WHEN et.taskStatus = 0
+             AND et.currentDueDate &lt; CURRENT_DATE
+            THEN 1
+            WHEN et.taskStatus IN (1, 3)
+             AND (
+                (et.taskStatus = 3 AND et.currentDueDate &lt; CURRENT_DATE)
+                OR EXISTS (
+                    SELECT 1
+                    FROM task_action late_submission
+                    WHERE late_submission.taskId = et.taskId
+                      AND late_submission.actionType = 'SUBMIT'
+                      AND CAST(late_submission.actionTime AS DATE) &gt; COALESCE(
+                          (
+                              SELECT MAX(return_action.newDueDate)
+                              FROM task_action return_action
+                              WHERE return_action.taskId = et.taskId
+                                AND return_action.actionType = 'REJECT'
+                                AND return_action.actionTime &lt; late_submission.actionTime
+                          ),
+                          et.baseDueDate
+                      )
+                )
+             )
+            THEN 1
+            ELSE 0
+        END
     </sql>
 
     <sql id="taskFrom">
@@ -40,7 +73,7 @@
                 AND et.empId = #{empId}
             </if>
             <if test="department != null and department != ''">
-                AND tt.dutyDept = #{department}
+                AND et.assignedDept = #{department}
             </if>
             <if test='status == "0"'>
                 AND et.taskStatus = 0
@@ -48,20 +81,65 @@
             <if test='status == "1"'>
                 AND et.taskStatus = 1
             </if>
+            <if test='status == "2"'>
+                AND et.taskStatus = 2
+            </if>
+            <if test='status == "3"'>
+                AND et.taskStatus = 3
+            </if>
             <if test='status == "overdue"'>
-                AND et.taskStatus = 0
-                AND CAST(TIMESTAMPADD(DAY, tt.offsetDay, e.entryTime) AS DATE) &lt; CURRENT_DATE
+                AND <include refid="overdueFlag"/> = 1
             </if>
         </where>
     </sql>
 
     <insert id="batchInsert">
-        INSERT INTO emp_task(empId, tplId, taskStatus, finishTime)
+        INSERT INTO emp_task(
+            empId, tplId, assignedDept, baseDueDate, currentDueDate,
+            currentSubmissionId, taskStatus, finishByAccountId, finishByName,
+            finishTime, version
+        )
         VALUES
         <foreach collection="list" item="item" separator=",">
-            (#{item.empId}, #{item.tplId}, #{item.taskStatus}, #{item.finishTime})
+            (
+                #{item.empId}, #{item.tplId}, #{item.assignedDept},
+                #{item.baseDueDate}, #{item.currentDueDate}, #{item.currentSubmissionId},
+                #{item.taskStatus}, #{item.finishByAccountId}, #{item.finishByName},
+                #{item.finishTime}, #{item.version}
+            )
         </foreach>
     </insert>
+
+    <insert id="insertSnapshotTask" useGeneratedKeys="true" keyProperty="taskId">
+        INSERT INTO emp_task(
+            empId, tplId, assignedDept, baseDueDate, currentDueDate,
+            currentSubmissionId, taskStatus, finishByAccountId, finishByName,
+            finishTime, version
+        )
+        VALUES (
+            #{empId}, #{tplId}, #{assignedDept}, #{baseDueDate}, #{currentDueDate},
+            #{currentSubmissionId}, #{taskStatus}, #{finishByAccountId}, #{finishByName},
+            #{finishTime}, #{version}
+        )
+    </insert>
+
+    <select id="selectById" resultType="cn.edu.nuc.onboarding.system.entity.EmpTask">
+        SELECT
+            taskId,
+            empId,
+            tplId,
+            assignedDept,
+            baseDueDate,
+            currentDueDate,
+            currentSubmissionId,
+            taskStatus,
+            finishByAccountId,
+            finishByName,
+            finishTime,
+            version
+        FROM emp_task
+        WHERE taskId = #{taskId}
+    </select>
 
     <select id="selectTaskPage" resultType="cn.edu.nuc.onboarding.system.vo.EmpTaskVO">
         SELECT <include refid="taskColumns"/>
@@ -90,19 +168,43 @@
         WHERE et.taskId = #{taskId}
     </select>
 
-    <update id="finishTask">
+    <update id="submitTask">
         UPDATE emp_task
-        SET taskStatus = 1,
-            finishTime = #{finishTime}
+        SET currentSubmissionId = #{currentSubmissionId},
+            taskStatus = 1,
+            version = version + 1
         WHERE taskId = #{taskId}
-          AND taskStatus = 0
+          AND taskStatus IN (0, 3)
+          AND version = #{version}
+    </update>
+
+    <update id="confirmTask">
+        UPDATE emp_task
+        SET taskStatus = 2,
+            finishByAccountId = #{accountId},
+            finishByName = #{finishByName},
+            finishTime = #{finishTime},
+            version = version + 1
+        WHERE taskId = #{taskId}
+          AND taskStatus = 1
+          AND version = #{version}
+    </update>
+
+    <update id="rejectTask">
+        UPDATE emp_task
+        SET taskStatus = 3,
+            currentDueDate = #{newDueDate},
+            version = version + 1
+        WHERE taskId = #{taskId}
+          AND taskStatus = 1
+          AND version = #{version}
     </update>
 
     <select id="countUnfinishedByEmpId" resultType="int">
         SELECT COUNT(*)
         FROM emp_task
         WHERE empId = #{empId}
-          AND taskStatus = 0
+          AND taskStatus IN (0, 1, 3)
     </select>
 
     <delete id="deleteByEmpId">
@@ -114,13 +216,9 @@
             e.empId,
             e.empName,
             COUNT(et.taskId) AS totalCount,
-            SUM(CASE WHEN et.taskStatus = 1 THEN 1 ELSE 0 END) AS finishedCount,
-            SUM(CASE WHEN et.taskStatus = 0 THEN 1 ELSE 0 END) AS pendingCount,
-            SUM(CASE
-                    WHEN et.taskStatus = 0
-                     AND CAST(TIMESTAMPADD(DAY, tt.offsetDay, e.entryTime) AS DATE) &lt; CURRENT_DATE
-                    THEN 1 ELSE 0
-                END) AS overdueCount
+            SUM(CASE WHEN et.taskStatus = 2 THEN 1 ELSE 0 END) AS finishedCount,
+            SUM(CASE WHEN et.taskStatus IN (0, 1, 3) THEN 1 ELSE 0 END) AS pendingCount,
+            SUM(<include refid="overdueFlag"/>) AS overdueCount
         FROM employee e
         LEFT JOIN emp_task et ON et.empId = e.empId
         LEFT JOIN task_template tt ON tt.tplId = et.tplId
@@ -130,27 +228,21 @@
 
     <select id="selectDepartmentStats" resultType="cn.edu.nuc.onboarding.system.vo.DepartmentStatsVO">
         SELECT
-            tt.dutyDept,
+            et.assignedDept AS dutyDept,
             COUNT(et.taskId) AS totalCount,
-            SUM(CASE WHEN et.taskStatus = 1 THEN 1 ELSE 0 END) AS finishedCount,
-            SUM(CASE WHEN et.taskStatus = 0 THEN 1 ELSE 0 END) AS pendingCount,
-            SUM(CASE
-                    WHEN et.taskStatus = 0
-                     AND CAST(TIMESTAMPADD(DAY, tt.offsetDay, e.entryTime) AS DATE) &lt; CURRENT_DATE
-                    THEN 1 ELSE 0
-                END) AS overdueCount
+            SUM(CASE WHEN et.taskStatus = 2 THEN 1 ELSE 0 END) AS finishedCount,
+            SUM(CASE WHEN et.taskStatus IN (0, 1, 3) THEN 1 ELSE 0 END) AS pendingCount,
+            SUM(<include refid="overdueFlag"/>) AS overdueCount
         FROM emp_task et
         INNER JOIN employee e ON e.empId = et.empId
-        INNER JOIN task_template tt ON tt.tplId = et.tplId
-        GROUP BY tt.dutyDept
-        ORDER BY tt.dutyDept ASC
+        GROUP BY et.assignedDept
+        ORDER BY et.assignedDept ASC
     </select>
 
     <select id="selectOverdueTasks" resultType="cn.edu.nuc.onboarding.system.vo.EmpTaskVO">
         SELECT <include refid="taskColumns"/>
         <include refid="taskFrom"/>
-        WHERE et.taskStatus = 0
-          AND CAST(TIMESTAMPADD(DAY, tt.offsetDay, e.entryTime) AS DATE) &lt; CURRENT_DATE
+        WHERE <include refid="overdueFlag"/> = 1
         ORDER BY dueDate ASC, et.taskId ASC
     </select>
 </mapper>

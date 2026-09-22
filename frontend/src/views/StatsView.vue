@@ -4,6 +4,8 @@ import { CircleCheck, Clock, DataAnalysis, Warning } from '@element-plus/icons-v
 import { getEmployees } from '../api/employees'
 import { getDepartmentStats, getEmployeeStats } from '../api/stats'
 import { getOverdueTasks } from '../api/tasks'
+import { getTaskStatusMeta } from '../utils/onboardingTasks'
+import { loadStatsDashboard } from '../utils/stats'
 
 const loading = ref(false)
 const employeeLoading = ref(false)
@@ -16,18 +18,20 @@ const overdueTasks = ref([])
 async function loadBaseData() {
   loading.value = true
   try {
-    const [employees, departments, overdue] = await Promise.all([
-      getEmployees({ pageNum: 1, pageSize: 100 }),
-      getDepartmentStats(),
-      getOverdueTasks()
-    ])
-    employeeOptions.value = employees.list
-    departmentStats.value = departments
-    overdueTasks.value = overdue
-    if (!selectedEmpId.value && employees.list.length) {
-      selectedEmpId.value = employees.list[0].empId
-      await loadEmployeeStats()
-    }
+    const data = await loadStatsDashboard({
+      selectedEmpId: selectedEmpId.value,
+      listEmployees: () => getEmployees({ pageNum: 1, pageSize: 100 }),
+      listDepartmentStats: getDepartmentStats,
+      listOverdueTasks: getOverdueTasks,
+      loadEmployeeStats: getEmployeeStats
+    })
+    employeeOptions.value = data.employeeOptions
+    departmentStats.value = data.departmentStats
+    overdueTasks.value = data.overdueTasks
+    selectedEmpId.value = data.selectedEmpId
+    employeeStats.value = data.employeeStats
+  } catch {
+    // The HTTP interceptor already presents the server error.
   } finally {
     loading.value = false
   }
@@ -42,6 +46,8 @@ async function searchEmployees(keyword) {
       pageSize: 50
     })
     employeeOptions.value = result.list
+  } catch {
+    // The HTTP interceptor already presents the server error.
   } finally {
     employeeLoading.value = false
   }
@@ -52,12 +58,20 @@ async function loadEmployeeStats() {
     employeeStats.value = null
     return
   }
-  employeeStats.value = await getEmployeeStats(selectedEmpId.value)
+  try {
+    employeeStats.value = await getEmployeeStats(selectedEmpId.value)
+  } catch {
+    // The HTTP interceptor already presents the server error.
+  }
 }
 
 function progress(row) {
   if (!row.totalCount) return 0
   return Math.round((row.finishedCount / row.totalCount) * 100)
+}
+
+function taskStatusMeta(task) {
+  return getTaskStatusMeta(task)
 }
 
 onMounted(loadBaseData)
@@ -144,11 +158,13 @@ onMounted(loadBaseData)
         <el-table-column prop="taskId" label="任务编号" width="105" align="center" />
         <el-table-column prop="empName" label="员工" min-width="110" />
         <el-table-column prop="taskName" label="任务名称" min-width="200" />
-        <el-table-column prop="dutyDept" label="责任部门" min-width="140" />
-        <el-table-column prop="dueDate" label="应完成日期" min-width="135" align="center" />
-        <el-table-column label="状态" width="110" align="center">
-          <template #default>
-            <el-tag type="danger" effect="plain">已逾期</el-tag>
+        <el-table-column prop="assignedDept" label="责任部门" min-width="140" />
+        <el-table-column prop="currentDueDate" label="当前截止日期" min-width="140" align="center" />
+        <el-table-column label="状态" width="165" align="center">
+          <template #default="{ row }">
+            <el-tag :type="taskStatusMeta(row).type" effect="plain">
+              {{ taskStatusMeta(row).label }}
+            </el-tag>
           </template>
         </el-table-column>
       </el-table>

@@ -6,6 +6,7 @@ import {
   Collection,
   DataAnalysis,
   FolderOpened,
+  Avatar,
   OfficeBuilding,
   SwitchButton,
   UserFilled
@@ -21,8 +22,14 @@ const menuItems = computed(() => {
     return [
       { path: '/templates', label: '任务模板', icon: Collection },
       { path: '/employees', label: '入职档案', icon: UserFilled },
+      { path: '/department-owners', label: '部门责任人', icon: Avatar },
       { path: '/stats', label: '进度汇总', icon: DataAnalysis },
       { path: '/archive', label: '归档管理', icon: FolderOpened }
+    ]
+  }
+  if (auth.isEmployee) {
+    return [
+      { path: '/tasks', label: '我的任务', icon: Calendar }
     ]
   }
   return [
@@ -30,8 +37,20 @@ const menuItems = computed(() => {
   ]
 })
 
-function logout() {
-  auth.logout()
+const workspaceName = computed(() => {
+  if (auth.isHr) return '人事工作台'
+  if (auth.isEmployee) return '员工任务工作台'
+  return '部门任务工作台'
+})
+
+const roleName = computed(() => {
+  if (auth.isHr) return '人事管理员'
+  if (auth.isEmployee) return '员工'
+  return '部门责任人'
+})
+
+async function logout() {
+  await auth.logout()
   router.replace('/login')
 }
 </script>
@@ -63,8 +82,8 @@ function logout() {
       <div class="sidebar-footer">
         <span class="sidebar-avatar">{{ auth.operator.slice(0, 1) }}</span>
         <div>
-          <strong>{{ auth.isHr ? '人事管理员' : '部门责任人' }}</strong>
-          <span>{{ auth.isHr ? '人事工作台' : auth.department }}</span>
+          <strong>{{ roleName }}</strong>
+          <span>{{ auth.isHr ? auth.department : workspaceName }}</span>
         </div>
       </div>
     </aside>
@@ -74,14 +93,14 @@ function logout() {
         <div class="header-context">
           <span>入职协同</span>
           <i>/</i>
-          <strong>{{ auth.isHr ? '人事工作台' : '部门任务工作台' }}</strong>
+          <strong>{{ workspaceName }}</strong>
         </div>
         <div class="header-actions">
           <div class="user-chip">
             <span class="user-avatar">{{ auth.operator.slice(0, 1) }}</span>
             <div>
               <strong>{{ auth.operator }}</strong>
-              <span>{{ auth.isHr ? '全部权限' : '部门权限' }}</span>
+              <span>{{ auth.isHr ? '全部权限' : roleName }}</span>
             </div>
           </div>
           <el-button class="logout-button" :icon="SwitchButton" plain @click="logout">

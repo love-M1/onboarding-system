@@ -1,119 +1,95 @@
 # 项目跟进记录
 
-更新时间：2026-09-21
+更新时间：2026-09-22
 
-## 1. 本次会话目标
+## 1. 最终目标
 
-为现有新员工入职任务协同系统增加真实账号认证，形成完整操作闭环：
+把原有“员工直接确认任务”的实现升级为真实业务闭环：
 
-1. HR 使用手机号（工号）和密码登录。
-2. HR 录入新员工信息并完成建档。
-3. 系统根据任务模板自动生成该员工的入职任务。
-4. 新员工使用 HR 建档时登记的手机号获取验证码并注册。
-5. 注册账号自动绑定对应员工档案。
-6. 员工登录后只查看并确认自己的任务。
-7. HR 可在档案详情和进度汇总中查看任务完成结果。
+1. HR 维护任务模板，并管理每个部门的责任人账号。
+2. HR 建立员工档案，系统按模板自动分配责任部门并计算截止日期。
+3. 员工上传办理材料，任务进入待部门确认状态。
+4. 部门责任人核对材料，确认完成或退回补交。
+5. 员工根据退回意见重新提交，全部历史保留。
+6. 所有任务确认完成后，HR 才能归档档案。
 
-## 2. 已确认的认证方案
+## 2. 已确认的业务规则
 
-- 手机号同时作为登录账号和工号。
-- 密码使用 BCrypt 哈希保存，不保存明文。
-- 公开注册仅允许创建 `EMPLOYEE` 账号。
-- 员工注册手机号必须能在 HR 创建的员工档案中找到。
-- HR 账号由后端配置初始化，不允许公开自助注册。
-- 保留现有 `DEPARTMENT` 后端权限兼容能力，但不再提供该角色的演示登录入口。
-- 登录成功后签发随机 Bearer Token，服务端只保存 Token 的 SHA-256 哈希。
-- 普通业务接口不再信任 `X-Role`、`X-Department` 和 `X-Operator` 请求头。
-- 演示环境可以让验证码接口返回 `devCode`，生产环境必须通过 `AUTH_EXPOSE_CODE=false` 关闭。
+- 任务状态：`0=待员工处理`、`1=待部门确认`、`2=已完成`、`3=已退回`。
+- `assignedDept`、`baseDueDate` 和 `currentDueDate` 在建档时按模板快照写入。
+- 每个部门最多一个启用责任人；删除责任人采用软停用。
+- 员工提交必须包含至少一个 JPG、JPEG、PNG 或 PDF 文件。
+- 单文件最大 10 MB，单次最多 10 个附件，备注最多 500 字。
+- 部门退回必须填写原因和新的截止日期，新日期不能早于今天。
+- 按时退回不会自动逾期，页面显示“已退回 · 待补交”。
+- 原截止日已过、员工本次提交迟交，或新截止日已过未重交时才计逾期。
+- 截止日当天不计逾期，次日起才计逾期。
+- 只有状态 2 计入完成进度；状态 0、1、3 都会阻止归档和删除。
+- HR 只读查看任务，不能代替部门责任人确认或退回。
 
-## 3. 已确认的任务权限
+## 3. 已交付的后端能力
 
-- `HR`：查看全部任务、维护模板、建档、查看统计和归档，但不能代替员工确认任务。
-- `EMPLOYEE`：只能查看和确认自己档案下的任务。
-- `DEPARTMENT`：保留历史接口兼容行为，只能处理本部门任务。
+- `emp_task` 保存责任部门、原始截止日期、当前截止日期、确认人和乐观锁版本。
+- `task_action` 永久保存 `SUBMIT`、`CONFIRM`、`REJECT` 操作历史。
+- `task_attachment` 保存附件元数据，文件落在配置的私有目录。
+- 任务详情返回状态、逾期标识、确认信息、操作历史和附件下载地址。
+- 员工提交：`POST /api/tasks/{taskId}/submissions`。
+- 部门确认：`POST /api/tasks/{taskId}/confirm`。
+- 部门退回：`POST /api/tasks/{taskId}/reject`。
+- 附件下载：`GET /api/tasks/{taskId}/attachments/{attachmentId}`。
+- 部门责任人管理：`/api/department-owners` 的增改、停用和密码重置。
+- 旧的 `/api/tasks/{taskId}/finish` 旁路已删除，避免跳过员工提交和部门审核。
 
-## 4. 相关设计文档
+## 4. 已交付的前端能力
 
-- 设计规格：`docs/superpowers/specs/2026-09-21-employee-auth-closed-loop-design.md`
-- 实现计划：`docs/superpowers/plans/2026-09-21-employee-auth-closed-loop-implementation.md`
+- HR 导航新增“部门责任人”管理页。
+- 员工任务工作台保留原有布局，改为完全由后端任务记录驱动。
+- 员工可上传真实附件、重新提交，并查看退回原因、截止日期和处理历史。
+- 部门责任人可按部门查询任务，在详情抽屉查看附件并确认或退回。
+- HR 在任务清单、档案详情和进度汇总中只读查看最终状态。
+- 逾期任务可通过状态筛选查询。
+- 接口错误由统一拦截器显示，页面反馈与后端返回保持一致。
+
+## 5. 关键文件
+
+- 设计规格：`docs/superpowers/specs/2026-09-22-hr-employee-department-confirmation-design.md`
+- 实施计划：`docs/superpowers/plans/2026-09-22-hr-employee-department-confirmation-implementation.md`
 - 测试记录：`docs/TEST-CASES.md`
 - 项目说明：`README.md`
 - 启动说明：`启动说明.md`
+- 数据库脚本：`sql/onboarding_sys.sql`
+- 附件目录配置：`ONBOARDING_UPLOAD_DIR`，默认 `uploads/onboarding`
 
-后续修改认证、注册或任务权限时，应同时检查以上文档是否仍然一致。
+## 6. 当前验证基线
 
-## 5. Git 与远程仓库
+```powershell
+mvn clean test
+cd frontend
+npm test
+npm run build
+```
 
-- 本地分支：`main`
+自动化验证结果以 `docs/TEST-CASES.md` 为准。最终推送前应重新执行以上三条命令，并完成 HR 建档、员工提交、部门退回、员工重提、部门确认和 HR 归档的浏览器验收。
+
+## 7. Git 与远程仓库
+
 - 远程仓库：`https://github.com/love-M1/onboarding-system.git`
-- 初始化提交：`e356683 初始化项目`
-- 本地 `main` 已设置为跟踪 `origin/main`
+- 本次实现分支：`codex/qa-fixes-and-auth-flow`
+- 提交时必须包含后端、前端、SQL、启动说明、测试记录和本跟进文档。
 
 常用命令：
 
 ```powershell
-cd C:\Users\GuoZ\Desktop\onboarding-system-source-with-startup
 git status
 git add <需要提交的文件>
 git commit -m "说明本次修改"
 git push
 ```
 
-## 6. 当前进度记录
+## 8. 部署注意事项
 
-- 已完成 Git 仓库初始化，并将初始项目快照推送到 GitHub。
-- 已完成认证闭环设计规格和实现计划文档。
-- 仓库中已经存在认证数据层、认证接口、前端登录注册页和对应测试的进行中实现。
-- 截至本文档创建时，工作区仍有尚未提交的认证相关修改。最终完成状态必须以后端测试、前端构建和端到端验收结果为准，不能仅依据文件已经存在来判断。
-
-## 7. 后续验收步骤
-
-### 7.1 后端测试
-
-```powershell
-cd C:\Users\GuoZ\Desktop\onboarding-system-source-with-startup
-mvn clean test
-```
-
-重点确认：
-
-- HR 初始化账号可以登录。
-- 未认证请求不能访问业务接口。
-- HR 建档后能够生成任务。
-- 未建档手机号不能申请验证码。
-- 验证码错误、过期或重复使用时注册失败。
-- 员工注册后自动绑定正确的员工档案。
-- 员工只能查询和确认自己的任务。
-- 注销后原 Token 失效。
-
-### 7.2 前端构建
-
-```powershell
-cd C:\Users\GuoZ\Desktop\onboarding-system-source-with-startup\frontend
-npm run build
-```
-
-### 7.3 端到端验收
-
-1. 使用 HR 账号登录。
-2. 创建一名新员工并确认任务自动生成。
-3. 退出 HR 账号。
-4. 使用新员工手机号申请验证码并完成注册。
-5. 确认员工进入“我的任务”，且只看到自己的任务。
-6. 确认完成一项任务。
-7. 重新登录 HR，在档案详情和进度汇总中检查结果。
-
-## 8. 恢复工作时的建议顺序
-
-1. 执行 `git status`，确认主线程或其他人留下的未提交修改。
-2. 阅读本文件、设计规格和实现计划。
-3. 执行后端测试和前端构建，获取当前真实基线。
-4. 修复失败项后再补充功能，不覆盖工作区中已有的未提交修改。
-5. 完成端到端验收后，再按功能拆分提交并推送。
-
-## 9. 安全注意事项
-
-- 部署时通过 `AUTH_HR_PHONE`、`AUTH_HR_PASSWORD` 覆盖演示 HR 账号配置。
-- 生产环境设置 `AUTH_EXPOSE_CODE=false`，防止接口直接返回验证码。
+- 通过 `AUTH_HR_PHONE`、`AUTH_HR_PASSWORD` 和 `AUTH_HR_NAME` 覆盖演示 HR 账号。
+- 生产环境设置 `AUTH_EXPOSE_CODE=false`。
+- 通过 `ONBOARDING_UPLOAD_DIR` 指向持久化且不可公开访问的附件目录。
 - 不要把真实数据库密码、短信服务密钥或 GitHub Token 写入源码。
-- 不要恢复基于 `X-Role` 请求头的授权逻辑。
+- 初始化脚本会重建业务表；已有生产数据时不得直接执行。

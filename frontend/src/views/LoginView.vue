@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Iphone, Key, Lock, OfficeBuilding } from '@element-plus/icons-vue'
 import { requestCode } from '../api/auth'
+import DepartmentSelect from '../components/DepartmentSelect.vue'
 import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
@@ -23,7 +24,8 @@ const registerForm = reactive({
   phone: '',
   code: '',
   password: '',
-  confirmPassword: ''
+  confirmPassword: '',
+  department: ''
 })
 
 const phonePattern = /^1[3-9]\d{9}$/
@@ -60,6 +62,8 @@ async function sendCode() {
     } else {
       ElMessage.success('验证码已发送')
     }
+  } catch {
+    // The HTTP interceptor already presents the server error.
   } finally {
     sendingCode.value = false
   }
@@ -82,6 +86,8 @@ async function submitLogin() {
     })
     ElMessage.success('登录成功')
     router.replace(auth.homePath)
+  } catch {
+    // The HTTP interceptor already presents the server error.
   } finally {
     submitting.value = false
   }
@@ -97,6 +103,10 @@ async function submitRegister() {
     ElMessage.warning('请输入6位验证码')
     return
   }
+  if (!registerForm.department) {
+    ElMessage.warning('请选择所属部门')
+    return
+  }
   if (registerForm.password !== registerForm.confirmPassword) {
     ElMessage.warning('两次输入的密码不一致')
     return
@@ -106,10 +116,13 @@ async function submitRegister() {
     await auth.register({
       phone,
       code: registerForm.code.trim(),
-      password: registerForm.password
+      password: registerForm.password,
+      department: registerForm.department
     })
     ElMessage.success('注册成功')
     router.replace(auth.homePath)
+  } catch {
+    // The HTTP interceptor already presents the server error.
   } finally {
     submitting.value = false
   }
@@ -160,8 +173,8 @@ onBeforeUnmount(() => {
       </div>
 
       <el-radio-group v-model="mode" size="large" class="auth-mode-switch">
-        <el-radio-button label="login">登录</el-radio-button>
-        <el-radio-button label="register">注册</el-radio-button>
+        <el-radio-button value="login">登录</el-radio-button>
+        <el-radio-button value="register">注册</el-radio-button>
       </el-radio-group>
 
       <div v-if="mode === 'login'" class="auth-form">
@@ -229,6 +242,10 @@ onBeforeUnmount(() => {
               {{ countdown > 0 ? `${countdown} 秒` : '获取验证码' }}
             </el-button>
           </div>
+        </label>
+        <label class="login-field">
+          <span>所属部门</span>
+          <DepartmentSelect v-model="registerForm.department" />
         </label>
         <label class="login-field">
           <span>密码</span>

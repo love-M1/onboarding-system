@@ -39,7 +39,9 @@ $sqlText = $sqlText.Replace(
     "USE $DbName;")
 
 $previousPassword = $env:MYSQL_PWD
+$previousOutputEncoding = $OutputEncoding
 try {
+    $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
     if ($null -ne $Password) {
         $env:MYSQL_PWD = $Password
     }
@@ -49,6 +51,7 @@ try {
     }
 } finally {
     $env:MYSQL_PWD = $previousPassword
+    $OutputEncoding = $previousOutputEncoding
 }
 
 Write-Host "Database ${DbName} initialized at ${DbHost}:${Port}." -ForegroundColor Green

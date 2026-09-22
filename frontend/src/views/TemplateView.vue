@@ -7,6 +7,7 @@ import {
   getTemplates,
   updateTemplate
 } from '../api/templates'
+import { validateForm } from '../utils/uiState'
 
 const loading = ref(false)
 const records = ref([])
@@ -30,6 +31,8 @@ async function loadData() {
       taskName: filters.taskName || undefined,
       dutyDept: filters.dutyDept || undefined
     })
+  } catch {
+    // The HTTP interceptor already presents the server error.
   } finally {
     loading.value = false
   }
@@ -58,7 +61,7 @@ function openEdit(row) {
 }
 
 async function submitForm() {
-  await formRef.value.validate()
+  if (!(await validateForm(formRef))) return
   submitting.value = true
   try {
     const payload = {
@@ -75,6 +78,8 @@ async function submitForm() {
     }
     dialogVisible.value = false
     await loadData()
+  } catch {
+    // The HTTP interceptor already presents the server error.
   } finally {
     submitting.value = false
   }
