@@ -45,6 +45,20 @@ public interface EmpTaskMapper {
             @Param("version") Integer version
     );
 
+    int confirmTask(
+            @Param("taskId") Integer taskId,
+            @Param("accountId") Integer accountId,
+            @Param("finishByName") String finishByName,
+            @Param("finishTime") LocalDateTime finishTime,
+            @Param("version") Integer version
+    );
+
+    int rejectTask(
+            @Param("taskId") Integer taskId,
+            @Param("newDueDate") java.time.LocalDate newDueDate,
+            @Param("version") Integer version
+    );
+
     int countUnfinishedByEmpId(@Param("empId") Integer empId);
 
     int deleteByEmpId(@Param("empId") Integer empId);

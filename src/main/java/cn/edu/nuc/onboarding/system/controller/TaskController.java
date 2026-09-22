@@ -16,12 +16,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -66,6 +68,22 @@ public class TaskController {
         return ApiResponse.success("任务已提交，等待部门确认", taskService.submitTask(taskId, note, files));
     }
 
+    @PostMapping("/{taskId}/confirm")
+    public ApiResponse<TaskDetailVO> confirm(@PathVariable Integer taskId) {
+        return ApiResponse.success("任务已确认完成", taskService.confirmTask(taskId));
+    }
+
+    @PostMapping("/{taskId}/reject")
+    public ApiResponse<TaskDetailVO> reject(
+            @PathVariable Integer taskId,
+            @RequestBody RejectTaskDTO dto
+    ) {
+        return ApiResponse.success(
+                "任务已退回，等待员工重新提交",
+                taskService.rejectTask(taskId, dto.reason(), dto.newDueDate())
+        );
+    }
+
     @GetMapping("/{taskId}/attachments/{attachmentId}")
     public ResponseEntity<Resource> downloadAttachment(
             @PathVariable Integer taskId,
@@ -86,6 +104,9 @@ public class TaskController {
                 .contentLength(storedFile.fileSize())
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
                 .body(new FileSystemResource(storedFile.path()));
+    }
+
+    public record RejectTaskDTO(String reason, LocalDate newDueDate) {
     }
 
     @GetMapping("/overdue")

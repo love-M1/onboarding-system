@@ -30,6 +30,9 @@ public final class ErrorCode {
     public static final int TASK_FILE_TOO_LARGE = 3008;
     public static final int TASK_TOO_MANY_FILES = 3009;
     public static final int TASK_ATTACHMENT_NOT_FOUND = 3010;
+    public static final int TASK_CONFIRM_NOT_ALLOWED = 3011;
+    public static final int TASK_REJECTION_INVALID = 3012;
+    public static final int TASK_REJECT_NOT_ALLOWED = 3013;
 
     public static final int UNFINISHED_TASKS_ARCHIVE = 4001;
     public static final int UNFINISHED_TASKS_DELETE = 4002;

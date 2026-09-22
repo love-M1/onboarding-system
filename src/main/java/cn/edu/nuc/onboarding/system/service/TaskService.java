@@ -7,6 +7,7 @@ import cn.edu.nuc.onboarding.system.vo.TaskDetailVO;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.time.LocalDate;
 
 public interface TaskService {
 
@@ -19,6 +20,10 @@ public interface TaskService {
     );
 
     EmpTaskVO finishTask(Integer taskId);
+
+    TaskDetailVO confirmTask(Integer taskId);
+
+    TaskDetailVO rejectTask(Integer taskId, String reason, LocalDate newDueDate);
 
     TaskDetailVO getTaskDetail(Integer taskId);
 

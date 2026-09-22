@@ -176,6 +176,82 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
+    @Transactional
+    public TaskDetailVO confirmTask(Integer taskId) {
+        EmpTaskVO task = requireTask(taskId);
+        AuthUser user = requireDepartmentOwner(task);
+        if (Boolean.TRUE.equals(task.getArchived())) {
+            throw new BizException(ErrorCode.EMPLOYEE_ARCHIVED, "档案已归档，不能修改任务状态");
+        }
+        if (!Integer.valueOf(1).equals(task.getTaskStatus())) {
+            throw new BizException(ErrorCode.TASK_CONFIRM_NOT_ALLOWED, "当前任务不能确认完成");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        TaskAction action = new TaskAction();
+        action.setTaskId(taskId);
+        action.setActionType("CONFIRM");
+        action.setActorAccountId(user.accountId());
+        action.setActorNameSnapshot(user.operator());
+        action.setActionTime(now);
+        action.setRelatedSubmissionId(task.getCurrentSubmissionId());
+        taskActionMapper.insert(action);
+
+        int updated = empTaskMapper.confirmTask(
+                taskId,
+                user.accountId(),
+                user.operator(),
+                now,
+                task.getVersion() == null ? 0 : task.getVersion()
+        );
+        if (updated == 0) {
+            throw new BizException(ErrorCode.TASK_CONFIRM_NOT_ALLOWED, "任务状态已变化，请刷新后重试");
+        }
+        log.info("Task confirmed: taskId={}, accountId={}", taskId, user.accountId());
+        return toTaskDetail(requireTask(taskId));
+    }
+
+    @Override
+    @Transactional
+    public TaskDetailVO rejectTask(Integer taskId, String reason, LocalDate newDueDate) {
+        EmpTaskVO task = requireTask(taskId);
+        AuthUser user = requireDepartmentOwner(task);
+        String safeReason = validateRejectionReason(reason);
+        if (newDueDate == null || newDueDate.isBefore(LocalDate.now())) {
+            throw new BizException(ErrorCode.TASK_REJECTION_INVALID, "新截止日期不能早于今天");
+        }
+        if (Boolean.TRUE.equals(task.getArchived())) {
+            throw new BizException(ErrorCode.EMPLOYEE_ARCHIVED, "档案已归档，不能修改任务状态");
+        }
+        if (!Integer.valueOf(1).equals(task.getTaskStatus())) {
+            throw new BizException(ErrorCode.TASK_REJECT_NOT_ALLOWED, "当前任务不能退回");
+        }
+
+        TaskAction action = new TaskAction();
+        action.setTaskId(taskId);
+        action.setActionType("REJECT");
+        action.setActorAccountId(user.accountId());
+        action.setActorNameSnapshot(user.operator());
+        action.setActionTime(LocalDateTime.now());
+        action.setReason(safeReason);
+        action.setNewDueDate(newDueDate);
+        action.setRelatedSubmissionId(task.getCurrentSubmissionId());
+        taskActionMapper.insert(action);
+
+        int updated = empTaskMapper.rejectTask(
+                taskId,
+                newDueDate,
+                task.getVersion() == null ? 0 : task.getVersion()
+        );
+        if (updated == 0) {
+            throw new BizException(ErrorCode.TASK_REJECT_NOT_ALLOWED, "任务状态已变化，请刷新后重试");
+        }
+        log.info("Task rejected: taskId={}, accountId={}, newDueDate={}",
+                taskId, user.accountId(), newDueDate);
+        return toTaskDetail(requireTask(taskId));
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public StoredFile openAttachment(Integer taskId, Integer attachmentId) {
         EmpTaskVO task = requireTask(taskId);
@@ -205,6 +281,26 @@ public class TaskServiceImpl implements TaskService {
             throw new BizException(ErrorCode.FORBIDDEN, "无权提交其他员工的任务");
         }
         return user;
+    }
+
+    private AuthUser requireDepartmentOwner(EmpTaskVO task) {
+        AuthUser user = AuthContext.get();
+        if (user == null || !user.isDepartment()
+                || !Objects.equals(user.department(), task.getAssignedDept())) {
+            throw new BizException(ErrorCode.FORBIDDEN, "无权处理该部门任务");
+        }
+        return user;
+    }
+
+    private String validateRejectionReason(String reason) {
+        if (reason == null || reason.isBlank()) {
+            throw new BizException(ErrorCode.TASK_REJECTION_INVALID, "退回原因不能为空");
+        }
+        String normalized = reason.trim();
+        if (normalized.length() > 500) {
+            throw new BizException(ErrorCode.TASK_REJECTION_INVALID, "退回原因不能超过500字");
+        }
+        return normalized;
     }
 
     private void requireTaskAccess(EmpTaskVO task) {
@@ -306,6 +402,8 @@ public class TaskServiceImpl implements TaskService {
         return switch (status.trim().toLowerCase()) {
             case "0", "pending" -> "0";
             case "1", "finished", "completed" -> "1";
+            case "2", "confirmed" -> "2";
+            case "3", "rejected", "returned" -> "3";
             case "overdue" -> "overdue";
             default -> throw new BizException(ErrorCode.BAD_REQUEST, "任务状态参数不正确");
         };

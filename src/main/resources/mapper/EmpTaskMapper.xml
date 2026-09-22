@@ -17,11 +17,7 @@
         et.currentDueDate AS dueDate,
         et.currentSubmissionId,
         et.taskStatus,
-        CASE
-            WHEN et.taskStatus = 0
-             AND et.currentDueDate &lt; CURRENT_DATE
-            THEN 1 ELSE 0
-        END AS overdue,
+        <include refid="overdueFlag"/> AS overdue,
         e.isArchived AS archived,
         CASE
             WHEN e.isArchived = 0
@@ -33,6 +29,36 @@
         et.finishByName,
         et.finishTime,
         et.version
+    </sql>
+
+    <sql id="overdueFlag">
+        CASE
+            WHEN et.taskStatus = 0
+             AND et.currentDueDate &lt; CURRENT_DATE
+            THEN 1
+            WHEN et.taskStatus IN (1, 3)
+             AND (
+                (et.taskStatus = 3 AND et.currentDueDate &lt; CURRENT_DATE)
+                OR EXISTS (
+                    SELECT 1
+                    FROM task_action late_submission
+                    WHERE late_submission.taskId = et.taskId
+                      AND late_submission.actionType = 'SUBMIT'
+                      AND CAST(late_submission.actionTime AS DATE) &gt; COALESCE(
+                          (
+                              SELECT MAX(return_action.newDueDate)
+                              FROM task_action return_action
+                              WHERE return_action.taskId = et.taskId
+                                AND return_action.actionType = 'REJECT'
+                                AND return_action.actionTime &lt; late_submission.actionTime
+                          ),
+                          et.baseDueDate
+                      )
+                )
+             )
+            THEN 1
+            ELSE 0
+        END
     </sql>
 
     <sql id="taskFrom">
@@ -55,9 +81,14 @@
             <if test='status == "1"'>
                 AND et.taskStatus = 1
             </if>
+            <if test='status == "2"'>
+                AND et.taskStatus = 2
+            </if>
+            <if test='status == "3"'>
+                AND et.taskStatus = 3
+            </if>
             <if test='status == "overdue"'>
-                AND et.taskStatus = 0
-                AND et.currentDueDate &lt; CURRENT_DATE
+                AND <include refid="overdueFlag"/> = 1
             </if>
         </where>
     </sql>
@@ -155,6 +186,28 @@
           AND version = #{version}
     </update>
 
+    <update id="confirmTask">
+        UPDATE emp_task
+        SET taskStatus = 2,
+            finishByAccountId = #{accountId},
+            finishByName = #{finishByName},
+            finishTime = #{finishTime},
+            version = version + 1
+        WHERE taskId = #{taskId}
+          AND taskStatus = 1
+          AND version = #{version}
+    </update>
+
+    <update id="rejectTask">
+        UPDATE emp_task
+        SET taskStatus = 3,
+            currentDueDate = #{newDueDate},
+            version = version + 1
+        WHERE taskId = #{taskId}
+          AND taskStatus = 1
+          AND version = #{version}
+    </update>
+
     <select id="countUnfinishedByEmpId" resultType="int">
         SELECT COUNT(*)
         FROM emp_task
@@ -171,13 +224,9 @@
             e.empId,
             e.empName,
             COUNT(et.taskId) AS totalCount,
-            SUM(CASE WHEN et.taskStatus = 1 THEN 1 ELSE 0 END) AS finishedCount,
-            SUM(CASE WHEN et.taskStatus = 0 THEN 1 ELSE 0 END) AS pendingCount,
-            SUM(CASE
-                    WHEN et.taskStatus = 0
-                     AND et.currentDueDate &lt; CURRENT_DATE
-                    THEN 1 ELSE 0
-                END) AS overdueCount
+            SUM(CASE WHEN et.taskStatus = 2 THEN 1 ELSE 0 END) AS finishedCount,
+            SUM(CASE WHEN et.taskStatus IN (0, 1, 3) THEN 1 ELSE 0 END) AS pendingCount,
+            SUM(<include refid="overdueFlag"/>) AS overdueCount
         FROM employee e
         LEFT JOIN emp_task et ON et.empId = e.empId
         LEFT JOIN task_template tt ON tt.tplId = et.tplId
@@ -189,13 +238,9 @@
         SELECT
             et.assignedDept AS dutyDept,
             COUNT(et.taskId) AS totalCount,
-            SUM(CASE WHEN et.taskStatus = 1 THEN 1 ELSE 0 END) AS finishedCount,
-            SUM(CASE WHEN et.taskStatus = 0 THEN 1 ELSE 0 END) AS pendingCount,
-            SUM(CASE
-                    WHEN et.taskStatus = 0
-                     AND et.currentDueDate &lt; CURRENT_DATE
-                    THEN 1 ELSE 0
-                END) AS overdueCount
+            SUM(CASE WHEN et.taskStatus = 2 THEN 1 ELSE 0 END) AS finishedCount,
+            SUM(CASE WHEN et.taskStatus IN (0, 1, 3) THEN 1 ELSE 0 END) AS pendingCount,
+            SUM(<include refid="overdueFlag"/>) AS overdueCount
         FROM emp_task et
         INNER JOIN employee e ON e.empId = et.empId
         GROUP BY et.assignedDept
@@ -205,8 +250,7 @@
     <select id="selectOverdueTasks" resultType="cn.edu.nuc.onboarding.system.vo.EmpTaskVO">
         SELECT <include refid="taskColumns"/>
         <include refid="taskFrom"/>
-        WHERE et.taskStatus = 0
-          AND et.currentDueDate &lt; CURRENT_DATE
+        WHERE <include refid="overdueFlag"/> = 1
         ORDER BY dueDate ASC, et.taskId ASC
     </select>
 </mapper>
