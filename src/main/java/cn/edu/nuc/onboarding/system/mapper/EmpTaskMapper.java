@@ -37,8 +37,6 @@ public interface EmpTaskMapper {
 
     EmpTaskVO selectTaskDetail(@Param("taskId") Integer taskId);
 
-    int finishTask(@Param("taskId") Integer taskId, @Param("finishTime") LocalDateTime finishTime);
-
     int submitTask(
             @Param("taskId") Integer taskId,
             @Param("currentSubmissionId") Integer currentSubmissionId,

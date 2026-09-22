@@ -157,6 +157,25 @@ class TaskSubmissionTest {
                 .isEqualTo(3005);
     }
 
+    @Test
+    void attachmentAccessIsRestrictedToTaskOwnerResponsibleDepartmentOrHr() {
+        TestTask testTask = createTask("13800000008");
+        AuthContext.set(employee(testTask.accountId(), testTask.empId(), "13800000008"));
+        TaskDetailVO detail = taskService.submitTask(
+                testTask.taskId(), null, List.of(validPdf()));
+        Integer attachmentId = detail.actions().get(0).attachments().get(0).attachmentId();
+
+        AuthContext.set(employee(999, testTask.empId() + 1, "13800000009"));
+        assertThatThrownBy(() -> taskService.openAttachment(testTask.taskId(), attachmentId))
+                .isInstanceOf(BizException.class)
+                .extracting("code")
+                .isEqualTo(403);
+
+        AuthContext.set(new AuthUser(1, "13800000000", "HR", null, "人事部", "人事管理员"));
+        assertThat(taskService.openAttachment(testTask.taskId(), attachmentId).fileSize())
+                .isGreaterThan(0);
+    }
+
     private TestTask createTask(String phone) {
         jdbcTemplate.update("""
                 INSERT INTO task_template(taskName, dutyDept, offsetDay)

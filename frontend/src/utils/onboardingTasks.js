@@ -123,33 +123,24 @@ export const ONBOARDING_TASKS = [
 ]
 
 export function buildTaskRoster(records = []) {
-  const exactMatches = new Map()
-
-  ONBOARDING_TASKS.forEach((definition, index) => {
-    const record = records.find((item) => item.taskName === definition.name)
-    if (record) exactMatches.set(index, record)
-  })
-
-  const usedTaskIds = new Set(
-    [...exactMatches.values()].map((record) => String(record.taskId))
-  )
-
-  return ONBOARDING_TASKS.map((definition, index) => {
-    let record = exactMatches.get(index)
-
-    if (!record) {
-      record = records.find((item) => !usedTaskIds.has(String(item.taskId)))
-      if (record) usedTaskIds.add(String(record.taskId))
-    }
+  return records.map((record, index) => {
+    const definition = ONBOARDING_TASKS.find((item) => item.name === record.taskName)
+    const metadata = definition || buildGenericTaskDefinition(record, index)
+    const taskName = record.taskName || metadata.name
 
     return {
-      ...definition,
-      taskId: record?.taskId ?? `demo-${definition.code}`,
-      taskStatus: record?.taskStatus ?? 0,
-      dueDate: record?.dueDate ?? '',
-      overdue: Boolean(record?.overdue),
-      canFinish: record?.canFinish ?? true,
-      archived: Boolean(record?.archived)
+      ...metadata,
+      ...record,
+      name: taskName,
+      taskName,
+      shortName: definition?.shortName || truncateTaskName(taskName),
+      department: record.assignedDept || record.dutyDept || metadata.department,
+      assignedDept: record.assignedDept || record.dutyDept || metadata.department,
+      dueDate: record.currentDueDate || record.dueDate || record.baseDueDate || '',
+      currentDueDate: record.currentDueDate || record.dueDate || record.baseDueDate || '',
+      taskStatus: Number(record.taskStatus ?? 0),
+      overdue: Boolean(record.overdue),
+      archived: Boolean(record.archived)
     }
   })
 }
@@ -163,9 +154,7 @@ export function formatFileSize(bytes) {
 
 export function getTaskProgress(roster = [], submissions = {}) {
   const total = roster.length
-  const completed = roster.filter((task) => (
-    task.taskStatus === 1 || submissions[task.taskId]?.submitted
-  )).length
+  const completed = roster.filter((task) => task.taskStatus === 2).length
 
   return {
     completed,
@@ -174,19 +163,67 @@ export function getTaskProgress(roster = [], submissions = {}) {
   }
 }
 
-export async function submitTaskMaterials(task, submission, finishTask) {
+export function getTaskStatusMeta(task = {}) {
+  const status = Number(task.taskStatus ?? 0)
+  const overdue = Boolean(task.overdue)
+
+  if (status === 2) {
+    return { label: '已完成', type: 'success', tone: 'complete' }
+  }
+  if (status === 1) {
+    return overdue
+      ? { label: '待部门确认 · 已逾期', type: 'danger', tone: 'overdue' }
+      : { label: '待部门确认', type: 'warning', tone: 'pending' }
+  }
+  if (status === 3) {
+    return overdue
+      ? { label: '已退回 · 已逾期', type: 'danger', tone: 'overdue' }
+      : { label: '已退回 · 待补交', type: 'warning', tone: 'returned' }
+  }
+  return overdue
+    ? { label: '待员工处理 · 已逾期', type: 'danger', tone: 'overdue' }
+    : { label: '待员工处理', type: 'info', tone: 'pending' }
+}
+
+export async function submitTaskMaterials(task, submission, submitTask) {
   if (!task || !submission?.files.length) {
     return false
   }
 
-  await finishTask(task.taskId)
-  submission.submitted = true
-  submission.submittedAt = new Date().toLocaleString('zh-CN', {
-    hour12: false,
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
+  await submitTask(task.taskId, {
+    note: submission.note?.trim() || '',
+    files: submission.files
   })
   return true
+}
+
+function buildGenericTaskDefinition(record, index) {
+  const department = record.assignedDept || record.dutyDept || '责任部门'
+  return {
+    code: `task-${record.taskId ?? index + 1}`,
+    name: record.taskName || `入职任务 ${index + 1}`,
+    shortName: truncateTaskName(record.taskName || `任务 ${index + 1}`),
+    badge: `任务 ${String(index + 1).padStart(2, '0')}`,
+    category: '入职办理',
+    department,
+    duration: '按部门要求',
+    summary: '请按责任部门说明准备材料，提交后等待部门责任人确认。',
+    image: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1200&q=80',
+    imageAlt: '办公桌前的入职任务协作',
+    accent: '#3370ff',
+    guide: [
+      { title: '查看任务要求', detail: '确认任务名称、责任部门和当前截止日期。' },
+      { title: '准备并上传材料', detail: '上传能够证明任务已办理完成的 JPG、PNG 或 PDF 文件。' },
+      { title: '等待部门确认', detail: '部门责任人核对材料后确认完成；材料不符时会退回并给出补交期限。' }
+    ],
+    materials: [
+      { name: '任务相关材料', format: 'JPG / PNG / PDF', required: true }
+    ],
+    contact: `${department} · 部门责任人`,
+    note: '请确保材料真实、清晰，提交后可在本页查看部门处理结果。'
+  }
+}
+
+function truncateTaskName(name) {
+  return name.length > 10 ? `${name.slice(0, 10)}...` : name
 }

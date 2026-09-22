@@ -168,14 +168,6 @@
         WHERE et.taskId = #{taskId}
     </select>
 
-    <update id="finishTask">
-        UPDATE emp_task
-        SET taskStatus = 1,
-            finishTime = #{finishTime}
-        WHERE taskId = #{taskId}
-          AND taskStatus = 0
-    </update>
-
     <update id="submitTask">
         UPDATE emp_task
         SET currentSubmissionId = #{currentSubmissionId},
@@ -212,7 +204,7 @@
         SELECT COUNT(*)
         FROM emp_task
         WHERE empId = #{empId}
-          AND taskStatus = 0
+          AND taskStatus IN (0, 1, 3)
     </select>
 
     <delete id="deleteByEmpId">

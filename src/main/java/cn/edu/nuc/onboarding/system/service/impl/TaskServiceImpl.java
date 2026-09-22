@@ -75,43 +75,6 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    @Transactional
-    public EmpTaskVO finishTask(Integer taskId) {
-        EmpTaskVO task = empTaskMapper.selectTaskDetail(taskId);
-        if (task == null) {
-            throw new BizException(ErrorCode.TASK_NOT_FOUND, "任务不存在");
-        }
-        if (Boolean.TRUE.equals(task.getArchived())) {
-            throw new BizException(ErrorCode.EMPLOYEE_ARCHIVED, "档案已归档，不能修改任务状态");
-        }
-        if (Integer.valueOf(1).equals(task.getTaskStatus())) {
-            throw new BizException(ErrorCode.TASK_ALREADY_FINISHED, "该任务已确认完成，不能重复确认");
-        }
-
-        AuthUser user = AuthContext.get();
-        if (user != null && user.isDepartment()
-                && !user.department().equals(task.getDutyDept())) {
-            throw new BizException(ErrorCode.FORBIDDEN, "无权确认其他部门的任务");
-        }
-        if (user != null && user.isEmployee()
-                && !Objects.equals(user.empId(), task.getEmpId())) {
-            throw new BizException(ErrorCode.FORBIDDEN, "无权确认其他员工的任务");
-        }
-        if (task.getEntryTime() != null
-                && task.getEntryTime().toLocalDate().isAfter(LocalDate.now())) {
-            throw new BizException(ErrorCode.ENTRY_TIME_NOT_REACHED, "入职日期尚未到来，暂不能确认完成");
-        }
-
-        int updated = empTaskMapper.finishTask(taskId, LocalDateTime.now());
-        if (updated == 0) {
-            throw new BizException(ErrorCode.TASK_ALREADY_FINISHED, "该任务已确认完成，不能重复确认");
-        }
-        EmpTaskVO result = empTaskMapper.selectTaskDetail(taskId);
-        log.info("Task finished: taskId={}, operator={}", taskId, user == null ? "unknown" : user.operator());
-        return result;
-    }
-
-    @Override
     @Transactional(readOnly = true)
     public TaskDetailVO getTaskDetail(Integer taskId) {
         EmpTaskVO task = requireTask(taskId);

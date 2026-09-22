@@ -39,8 +39,8 @@ public class RoleInterceptor implements HandlerInterceptor {
         if (requiresHr(path) && !"HR".equals(role)) {
             throw new BizException(ErrorCode.FORBIDDEN, "当前角色无权执行此操作");
         }
-        if (isTaskFinish(path) && "HR".equals(role)) {
-            throw new BizException(ErrorCode.FORBIDDEN, "HR 不能代替员工确认任务");
+        if (isDepartmentReview(path) && "HR".equals(role)) {
+            throw new BizException(ErrorCode.FORBIDDEN, "HR 不能代替部门责任人处理任务");
         }
         String department = account.getDepartment();
         if ("DEPARTMENT".equals(role) && !StringUtils.hasText(department)) {
@@ -70,8 +70,9 @@ public class RoleInterceptor implements HandlerInterceptor {
                 || path.equals("/api/tasks/overdue");
     }
 
-    private boolean isTaskFinish(String path) {
-        return path.startsWith("/api/tasks/") && path.endsWith("/finish");
+    private boolean isDepartmentReview(String path) {
+        return path.startsWith("/api/tasks/")
+                && (path.endsWith("/confirm") || path.endsWith("/reject"));
     }
 
 }

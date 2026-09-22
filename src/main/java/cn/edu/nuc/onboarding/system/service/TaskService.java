@@ -19,8 +19,6 @@ public interface TaskService {
             int pageSize
     );
 
-    EmpTaskVO finishTask(Integer taskId);
-
     TaskDetailVO confirmTask(Integer taskId);
 
     TaskDetailVO rejectTask(Integer taskId, String reason, LocalDate newDueDate);

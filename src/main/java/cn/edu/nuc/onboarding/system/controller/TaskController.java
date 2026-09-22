@@ -49,11 +49,6 @@ public class TaskController {
         return ApiResponse.success(taskService.listTasks(empId, department, status, pageNum, pageSize));
     }
 
-    @PostMapping("/{taskId}/finish")
-    public ApiResponse<EmpTaskVO> finish(@PathVariable Integer taskId) {
-        return ApiResponse.success("任务已确认完成", taskService.finishTask(taskId));
-    }
-
     @GetMapping("/{taskId}")
     public ApiResponse<TaskDetailVO> detail(@PathVariable Integer taskId) {
         return ApiResponse.success(taskService.getTaskDetail(taskId));

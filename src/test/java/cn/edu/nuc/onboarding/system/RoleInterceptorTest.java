@@ -61,10 +61,10 @@ class RoleInterceptorTest {
     }
 
     @Test
-    void hrCannotConfirmEmployeeTask() {
+    void hrCannotReviewEmployeeTask() {
         when(sessionService.authenticate("hr-token"))
                 .thenReturn(account("HR", null, "人事部"));
-        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/tasks/1/finish");
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/tasks/1/confirm");
         request.addHeader("Authorization", "Bearer hr-token");
 
         assertThatThrownBy(() -> interceptor.preHandle(
